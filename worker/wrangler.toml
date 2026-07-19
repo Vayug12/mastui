@@ -1,0 +1,13 @@
+name = "mastui-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# R2 bucket binding
+[[r2_buckets]]
+binding = "mastui_catalog"
+bucket_name = "mastui-catalog"
+
+# Environment variables
+[vars]
+CORS_ORIGIN = "*"
+# ADMIN_SECRET = "set via: wrangler secret put ADMIN_SECRET"

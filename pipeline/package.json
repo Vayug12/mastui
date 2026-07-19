@@ -1,0 +1,29 @@
+{
+  "name": "mastui-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Content pipeline: prompt templates -> HTML via Claude -> mobile screenshots -> catalog metadata",
+  "scripts": {
+    "plan": "node run.js --plan",
+    "packs": "node run.js --packs",
+    "generate": "node run.js",
+    "generate:cc": "node run.js --provider claude-code",
+    "generate:codex": "node run.js --provider codex",
+    "generate:opencode": "node run.js --provider opencode",
+    "shoot": "node shoot.js",
+    "auto": "node auto-generate.js",
+    "auto:codex": "node auto-generate.js --provider codex",
+    "auto:loop": "node auto-generate.js --loop",
+    "pack": "node auto-generate.js --pack random",
+    "pack:codex": "node auto-generate.js --pack random --provider codex",
+    "render": "node render-server.js",
+    "start": "node start.js",
+    "start:codex": "node start.js --provider codex",
+    "start:pack": "node start.js --pack random"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "playwright": "^1.49.0"
+  }
+}

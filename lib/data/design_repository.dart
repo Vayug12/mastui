@@ -1,0 +1,113 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
+
+import '../models/ui_design.dart';
+
+/// Loads the design catalog.
+///
+/// Tries network first (Cloudflare Worker + R2), falls back to bundled assets.
+class DesignRepository {
+  static const _catalogAsset = 'assets/catalog.json';
+  static const _catalogUrl =
+      'https://mastui-api.sanjeev-yadav1201.workers.dev/catalog';
+
+  List<UiDesign>? _cache;
+
+  /// Force-clear the in-memory cache so the next [load] call fetches fresh
+  /// data from the network. Called by pull-to-refresh.
+  void refresh() {
+    _cache = null;
+  }
+
+  Future<List<UiDesign>> load() async {
+    final cached = _cache;
+    if (cached != null) return cached;
+
+    // Try network first (always fresh from Cloudflare Worker + R2)
+    try {
+      final response = await http
+          .get(Uri.parse(_catalogUrl))
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final designs = _parseCatalog(response.body);
+        _cache = designs;
+        return designs;
+      }
+    } catch (_) {}
+
+    // Fallback to bundled assets (offline mode)
+    try {
+      return await _loadFromAssets();
+    } catch (_) {}
+
+    return [];
+  }
+
+  Future<List<UiDesign>> _loadFromAssets() async {
+    final raw = await rootBundle.loadString(_catalogAsset);
+    final designs = _parseCatalog(raw);
+    _cache = designs;
+    return designs;
+  }
+
+  List<UiDesign> _parseCatalog(String json) {
+    return (jsonDecode(json) as List<dynamic>)
+        .map((entry) => UiDesign.fromJson(entry as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Category filter values for the chip row — 'All' plus whatever the
+  /// catalog actually contains, so an empty category never shows a chip.
+  static List<String> categoriesOf(List<UiDesign> designs) => [
+        'All',
+        ...{for (final d in designs) d.category},
+      ];
+
+  /// Groups the catalog's pack screens into style packs, keeping each pack's
+  /// screens in their designed order. Legacy single-screen entries (no packId)
+  /// are ignored — the app browses packs only.
+  static List<StylePack> packsOf(List<UiDesign> designs) {
+    final byPack = <String, List<UiDesign>>{};
+    for (final d in designs) {
+      final packId = d.packId;
+      if (packId != null) (byPack[packId] ??= []).add(d);
+    }
+    final packs = [
+      for (final entry in byPack.entries)
+        StylePack(
+          id: entry.key,
+          name: entry.value.first.packName ?? entry.key,
+          screens: entry.value..sort((a, b) => a.order.compareTo(b.order)),
+        ),
+    ];
+    packs.sort((a, b) => a.name.compareTo(b.name));
+    return packs;
+  }
+}
+
+/// One visual style rendered as a consistent set of foundation screens —
+/// same palette, typography and components, so it reads as one real app.
+class StylePack {
+  const StylePack({required this.id, required this.name, required this.screens});
+
+  final String id;
+  final String name;
+  final List<UiDesign> screens;
+
+  /// Cover image: the Home screen if present, else the first screen.
+  UiDesign get cover => screens.firstWhere(
+        (s) => s.category == 'Home',
+        orElse: () => screens.first,
+      );
+
+  /// Style tags minus the palette name repeated on every screen.
+  List<String> get tags => screens.first.styleTags;
+
+  /// Targets represented by this pack's screens, ready for a future platform filter.
+  List<String> get platforms => <String>{
+        for (final screen in screens) ...screen.platforms,
+      }.toList();
+}
