@@ -16,7 +16,7 @@ export const CATEGORIES = [
     id: 'login',
     name: 'Login',
     screens: [
-      { slug: 'email-login', title: 'Email Login', platforms: ['mobile', 'web'], brief: 'a login screen with email and password fields, a primary sign-in button, a "Continue with Google" secondary button, and a small "Forgot password?" link' },
+      { slug: 'email-login', title: 'Email Login', platforms: ['mobile', 'web'], brief: 'a login screen with email and password fields, a primary sign-in button, a secondary social-login button with a small neutral circular icon glyph (no real brand logo) and "Continue with Google" label, and a small "Forgot password?" link' },
       { slug: 'otp-verify', title: 'OTP Verification', platforms: ['mobile', 'web'], brief: 'a phone verification screen with six single-digit OTP boxes, a countdown timer for resending the code, and a full-width verify button' },
       { slug: 'signup', title: 'Create Account', platforms: ['mobile', 'web'], brief: 'a sign-up screen with name, email and password fields, a password-strength hint, a terms checkbox, and a primary create-account button' },
     ],
@@ -668,7 +668,7 @@ export const STYLES = [
  * colors, type, buttons, cards and spacing — not unrelated gallery pieces.
  */
 export const PACK_SCREENS = [
-  { slug: 'login', title: 'Login', platforms: ['mobile', 'web'], brief: 'a login screen with email and password fields, a primary sign-in button, a "Continue with Google" secondary button, and a small "Forgot password?" link' },
+  { slug: 'login', title: 'Login', platforms: ['mobile', 'web'], brief: 'a login screen with email and password fields, a primary sign-in button, a secondary social-login button with a small neutral circular icon glyph (no real brand logo) and "Continue with Google" label, and a small "Forgot password?" link' },
   { slug: 'signup', title: 'Sign Up', platforms: ['mobile', 'web'], brief: 'a sign-up screen with name, email and password fields, a password-strength hint, a terms checkbox, and a primary create-account button' },
   { slug: 'home', title: 'Home', platforms: ['mobile', 'web'], brief: 'a home screen with a greeting header and small avatar, a search bar, a horizontally scrolling row of featured cards, a section header with a "See all" link above a vertical list of content cards, and a five-icon bottom navigation bar with home active' },
   { slug: 'profile', title: 'Profile', platforms: ['mobile', 'web'], brief: 'a profile screen with a large centered avatar, name and username, a three-column stats row (posts, followers, following), a two-line bio, an edit-profile button, and a recent-activity list' },
@@ -680,6 +680,8 @@ export const PACK_SCREENS = [
 /** Build the prompt a MastUI user will copy into their AI coding tool. */
 export function buildUserPrompt(screen, style, palette) {
   return [
+    `Act like a frontend developer with 15 years of experience. I want the exact same UI with 95-99% similarity.`,
+    ``,
     `Design ${screen.brief} for a ${platformDescription(screen)}.`,
     ``,
     `Visual style — ${style.name}:`,

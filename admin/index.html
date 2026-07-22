@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MastUI Admin - Manage Designs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #f5f5f5;
+      color: #111;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid #e5e5e5;
+      background: #fff;
+    }
+
+    .header h1 { font-size: 18px; font-weight: 650; }
+
+    .status {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #f0f0f0;
+      color: #666;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .status.connected { background: #dcfce7; color: #166534; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+
+    .container { max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+
+    .card {
+      margin-bottom: 20px;
+      padding: 24px;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .card h2 { color: #333; font-size: 15px; font-weight: 650; }
+    .field { margin-top: 16px; }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: #555;
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .field input[type="text"],
+    .field input[type="password"],
+    .field textarea,
+    .field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      color: #111;
+      font: inherit;
+      font-size: 14px;
+    }
+
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
+
+    .field textarea { min-height: 120px; line-height: 1.5; resize: vertical; }
+    .hint { margin-top: 4px; color: #999; font-size: 12px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 10px 14px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:disabled { cursor: not-allowed; opacity: 0.6; }
+    .btn-primary { width: 100%; border-color: #111; background: #111; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #333; }
+    .btn-secondary { border-color: #ddd; background: #fff; color: #333; }
+    .btn-secondary:hover:not(:disabled) { background: #f7f7f7; }
+    .btn-danger { border-color: #fecaca; background: #fff; color: #dc2626; }
+    .btn-danger:hover:not(:disabled) { background: #fef2f2; }
+
+    .catalog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .design-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .design-card {
+      overflow: hidden;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .design-card img {
+      display: block;
+      width: 100%;
+      height: 300px;
+      object-fit: contain;
+      object-position: center;
+      background: #f0f0f0;
+    }
+
+    .design-card-body { padding: 12px; }
+    .design-card-title { overflow: hidden; font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .design-card-meta { margin-top: 4px; color: #777; font-size: 12px; }
+
+    .design-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      min-height: 23px;
+      margin-top: 10px;
+    }
+
+    .tag { padding: 3px 7px; border-radius: 999px; background: #f3f4f6; color: #555; font-size: 11px; }
+
+    .design-card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .design-card-actions .btn { width: 100%; min-height: 36px; padding: 8px; }
+
+    .catalog-empty {
+      grid-column: 1 / -1;
+      padding: 28px;
+      border: 1px dashed #ddd;
+      border-radius: 10px;
+      color: #888;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .result { display: none; margin-top: 16px; padding: 12px 16px; border: 1px solid; border-radius: 8px; font-size: 13px; }
+    .result.visible { display: block; }
+    .result.success { border-color: #bbf7d0; background: #dcfce7; color: #166534; }
+    .result.error { border-color: #fecaca; background: #fee2e2; color: #991b1b; }
+
+    /* ── Analytics ── */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { padding: 16px; border: 1px solid #e5e5e5; border-radius: 10px; background: #fafafa; }
+    .stat-card .label { font-size: 12px; color: #777; margin-bottom: 4px; }
+    .stat-card .value { font-size: 24px; font-weight: 700; color: #111; }
+
+    .analytics-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .analytics-table th { text-align: left; padding: 8px 12px; background: #f9fafb; border-bottom: 2px solid #e5e5e5; color: #555; font-weight: 600; }
+    .analytics-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+    .analytics-table tr:hover td { background: #f9fafb; }
+    .analytics-table .rate { font-weight: 600; }
+    .analytics-table .rate.high { color: #16a34a; }
+    .analytics-table .rate.mid { color: #ca8a04; }
+    .analytics-table .rate.low { color: #dc2626; }
+
+    .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .category-card { padding: 14px; border: 1px solid #e5e5e5; border-radius: 10px; background: #fff; }
+    .category-card .name { font-size: 14px; font-weight: 650; margin-bottom: 8px; }
+    .category-card .stat-line { font-size: 12px; color: #555; margin-bottom: 2px; }
+    .category-card .stat-line strong { color: #111; }
+
+    .feedback-list { max-height: 400px; overflow-y: auto; }
+    .feedback-item { padding: 12px; border: 1px solid #f0f0f0; border-radius: 8px; margin-bottom: 8px; background: #fafafa; }
+    .feedback-item .meta { font-size: 11px; color: #888; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .feedback-item .stars { color: #f59e0b; }
+    .feedback-item .msg { font-size: 13px; color: #333; }
+    .feedback-empty { padding: 24px; text-align: center; color: #888; font-size: 13px; }
+
+    @media (max-width: 560px) {
+      .header { padding: 14px 16px; }
+      .container { margin: 20px auto; padding: 0 12px; }
+      .card { padding: 16px; }
+      .design-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .design-card img { height: 240px; }
+      .design-card-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>MastUI Admin</h1>
+    <span class="status" id="status">Not configured</span>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Connection</h2>
+      <div class="field">
+        <label for="apiUrl">API URL</label>
+        <input type="text" id="apiUrl" placeholder="https://mastui-api.sanjeev-yadav1201.workers.dev">
+      </div>
+      <div class="field">
+        <label for="adminSecret">Admin Secret</label>
+        <input type="password" id="adminSecret" autocomplete="current-password" placeholder="Enter your ADMIN_SECRET">
+      </div>
+    </section>
+
+    <!-- ── Analytics Dashboard ── -->
+    <section class="card" id="analyticsSection">
+      <div class="catalog-header">
+        <h2>Analytics Dashboard</h2>
+        <button type="button" class="btn btn-secondary" id="refreshAnalytics">Refresh</button>
+      </div>
+      <div id="analyticsSummary" class="stats-row">
+        <div class="stat-card"><div class="label">Total Views</div><div class="value" id="totalViews">—</div></div>
+        <div class="stat-card"><div class="label">Total Copies</div><div class="value" id="totalCopies">—</div></div>
+        <div class="stat-card"><div class="label">Copy Rate</div><div class="value" id="totalRate">—</div></div>
+        <div class="stat-card"><div class="label">Feedback</div><div class="value" id="totalFeedback">—</div></div>
+      </div>
+      <h2 style="margin-bottom:10px;">By Category</h2>
+      <div class="category-grid" id="categoryStats"></div>
+      <h2 style="margin-top:16px;margin-bottom:10px;">Per Design</h2>
+      <div style="overflow-x:auto;">
+        <table class="analytics-table" id="designStats">
+          <thead><tr><th>Design</th><th>Category</th><th>Views</th><th>Copies</th><th>Copy Rate</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="analyticsEmpty" class="catalog-empty" style="display:none;">No analytics data yet. Events will appear once users interact with designs.</div>
+    </section>
+
+    <!-- ── User Feedback ── -->
+    <section class="card">
+      <div class="catalog-header">
+        <h2>User Feedback</h2>
+        <button type="button" class="btn btn-secondary" id="refreshFeedback">Refresh</button>
+      </div>
+      <div class="feedback-list" id="feedbackList">
+        <div class="feedback-empty">No feedback submitted yet.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Generate from HTML</h2>
+      <div class="field">
+        <label for="renderServerUrl">Render Server URL</label>
+        <input type="text" id="renderServerUrl" placeholder="http://localhost:3000">
+        <div class="hint">Start pipeline: <code>npm run render</code></div>
+      </div>
+      <div class="field">
+        <label for="htmlCode">HTML Code</label>
+        <textarea id="htmlCode" style="min-height:200px;font-family:monospace;font-size:13px;" placeholder="Paste your complete HTML here..."></textarea>
+      </div>
+      <div class="field">
+        <label for="renderPrompt">Prompt</label>
+        <textarea id="renderPrompt" style="min-height:80px;" placeholder="The prompt used to generate this design..."></textarea>
+      </div>
+      <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label for="renderTitle">Title</label>
+          <input type="text" id="renderTitle" placeholder="e.g. Neon Cyber Dashboard">
+        </div>
+        <div>
+          <label for="renderCategory">Category</label>
+          <select id="renderCategory">
+            <option value="">Select...</option>
+            <option>Login</option>
+            <option>Dashboard</option>
+            <option>Onboarding</option>
+            <option>E-commerce</option>
+            <option>Profile</option>
+            <option>Pricing</option>
+            <option>Chat</option>
+            <option>Search</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label for="renderPlatform">Platform</label>
+          <select id="renderPlatform">
+            <option value="mobile">Mobile app</option>
+            <option value="web">Web app</option>
+            <option value="mobile,web">Mobile and web</option>
+          </select>
+        </div>
+        <div>
+          <label for="renderTags">Style Tags</label>
+          <input type="text" id="renderTags" placeholder="Neon, Dark, Amber Red">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button type="button" class="btn btn-secondary" id="renderBtn" style="flex:1;">Generate Screenshot</button>
+        <button type="button" class="btn btn-primary" id="renderUploadBtn" style="flex:1;" disabled>Upload Design</button>
+      </div>
+      <div class="result" id="renderResult" role="status"></div>
+      <div id="renderPreview" style="display:none;margin-top:16px;">
+        <label style="display:block;margin-bottom:6px;color:#555;font-size:13px;font-weight:550;">Preview</label>
+        <img id="renderPreviewImg" style="width:100%;max-height:400px;object-fit:contain;border:1px solid #e5e5e5;border-radius:8px;background:#f0f0f0;" alt="Generated screenshot">
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="catalog-header">
+        <h2>All UI Designs</h2>
+        <button type="button" class="btn btn-secondary" id="refreshDesigns">Refresh</button>
+      </div>
+      <div class="design-grid" id="designList">
+        <div class="catalog-empty">Set the API URL to load every design.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const apiUrl = $('#apiUrl');
+    const adminSecret = $('#adminSecret');
+    const status = $('#status');
+    const designList = $('#designList');
+    const refreshDesigns = $('#refreshDesigns');
+
+    const defaultApiUrl = 'https://mastui-api.sanjeev-yadav1201.workers.dev';
+    apiUrl.value = localStorage.getItem('mastui_api_url') || defaultApiUrl;
+    adminSecret.value = localStorage.getItem('mastui_admin_secret') || '';
+
+    apiUrl.addEventListener('change', () => {
+      localStorage.setItem('mastui_api_url', apiUrl.value.trim());
+      checkConnection();
+    });
+    adminSecret.addEventListener('change', () => {
+      localStorage.setItem('mastui_admin_secret', adminSecret.value);
+    });
+
+    function apiBaseUrl() {
+      return apiUrl.value.trim().replace(/\/$/, '');
+    }
+
+    function showResult(message, isError) {
+      result.textContent = message;
+      result.className = `result visible ${isError ? 'error' : 'success'}`;
+    }
+
+    function showCatalogMessage(message) {
+      const empty = document.createElement('div');
+      empty.className = 'catalog-empty';
+      empty.textContent = message;
+      designList.replaceChildren(empty);
+    }
+
+    function createDesignCard(design, baseUrl) {
+      const card = document.createElement('article');
+      card.className = 'design-card';
+
+      const image = document.createElement('img');
+      image.src = design.imageUrl || `${baseUrl}/designs/${encodeURIComponent(design.id)}.png`;
+      image.alt = design.title || design.id;
+      image.loading = 'lazy';
+      card.append(image);
+
+      const body = document.createElement('div');
+      body.className = 'design-card-body';
+
+      const title = document.createElement('div');
+      title.className = 'design-card-title';
+      title.textContent = design.title || design.id;
+      body.append(title);
+
+      const meta = document.createElement('div');
+      meta.className = 'design-card-meta';
+      const platforms = Array.isArray(design.platforms) && design.platforms.length
+        ? design.platforms
+        : ['mobile'];
+      const platformLabel = platforms
+        .map((platform) => platform === 'web' ? 'Web' : 'Mobile')
+        .join(' + ');
+      meta.textContent = `${design.category || 'Uncategorised'} - ${platformLabel} - ${design.id}`;
+      body.append(meta);
+
+      const tags = document.createElement('div');
+      tags.className = 'design-card-tags';
+      for (const tagName of design.styleTags || []) {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = tagName;
+        tags.append(tag);
+      }
+      body.append(tags);
+
+      const actions = document.createElement('div');
+      actions.className = 'design-card-actions';
+
+      const openImage = document.createElement('a');
+      openImage.className = 'btn btn-secondary';
+      openImage.href = image.src;
+      openImage.target = '_blank';
+      openImage.rel = 'noopener';
+      openImage.textContent = 'Open image';
+      actions.append(openImage);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'btn btn-danger';
+      deleteButton.textContent = 'Delete forever';
+      deleteButton.addEventListener('click', () => deleteDesign(design, deleteButton));
+      actions.append(deleteButton);
+
+      body.append(actions);
+      card.append(body);
+      return card;
+    }
+
+    function renderDesigns(designs) {
+      if (!Array.isArray(designs) || designs.length === 0) {
+        showCatalogMessage('No UI designs are currently published.');
+        return;
+      }
+
+      const cards = [...designs]
+        .sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+        .map((design) => createDesignCard(design, apiBaseUrl()));
+      designList.replaceChildren(...cards);
+    }
+
+    async function checkConnection() {
+      const url = apiBaseUrl();
+      if (!url) {
+        status.textContent = 'Not configured';
+        status.className = 'status';
+        showCatalogMessage('Set the API URL to load every design.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${url}/catalog`, {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const designs = await response.json();
+        status.textContent = `Connected - ${designs.length} designs`;
+        status.className = 'status connected';
+        renderDesigns(designs);
+      } catch {
+        status.textContent = 'Cannot reach API';
+        status.className = 'status error';
+        showCatalogMessage('Could not reach the API. Check the API URL and try again.');
+      }
+    }
+
+    async function deleteDesign(design, button) {
+      const url = apiBaseUrl();
+      const secret = adminSecret.value.trim();
+      if (!url) { showResult('Set the API URL first.', true); return; }
+      if (!secret) { showResult('Enter your admin secret before deleting.', true); return; }
+      if (!window.confirm(`Delete "${design.title || design.id}" forever? This cannot be undone.`)) return;
+
+      button.disabled = true;
+      button.textContent = 'Deleting...';
+      try {
+        const response = await fetch(`${url}/admin/designs/${encodeURIComponent(design.id)}`, {
+          method: 'DELETE',
+          headers: { 'X-Admin-Secret': secret },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+
+        showResult(`Deleted ${design.title || design.id}. It is no longer in the live catalog.`, false);
+        await checkConnection();
+      } catch (error) {
+        showResult(error.message, true);
+        button.disabled = false;
+        button.textContent = 'Delete forever';
+      }
+    }
+
+    // --- Render from HTML ---
+    const renderServerUrl = $('#renderServerUrl');
+    const htmlCode = $('#htmlCode');
+    const renderPrompt = $('#renderPrompt');
+    const renderTitle = $('#renderTitle');
+    const renderCategory = $('#renderCategory');
+    const renderPlatform = $('#renderPlatform');
+    const renderTags = $('#renderTags');
+    const renderBtn = $('#renderBtn');
+    const renderUploadBtn = $('#renderUploadBtn');
+    const renderResult = $('#renderResult');
+    const renderPreview = $('#renderPreview');
+    const renderPreviewImg = $('#renderPreviewImg');
+
+    let renderedBlob = null;
+
+    renderServerUrl.value = localStorage.getItem('mastui_render_url') || 'http://localhost:3000';
+    renderServerUrl.addEventListener('change', () => {
+      localStorage.setItem('mastui_render_url', renderServerUrl.value.trim());
+    });
+
+    function showRenderResult(message, isError) {
+      renderResult.textContent = message;
+      renderResult.className = `result visible ${isError ? 'error' : 'success'}`;
+    }
+
+    renderBtn.addEventListener('click', async () => {
+      const serverUrl = renderServerUrl.value.trim();
+      const html = htmlCode.value.trim();
+
+      if (!serverUrl) { showRenderResult('Set the render server URL.', true); return; }
+      if (!html) { showRenderResult('Paste HTML code first.', true); return; }
+
+      renderBtn.disabled = true;
+      renderBtn.textContent = 'Rendering...';
+      renderUploadBtn.disabled = true;
+      renderedBlob = null;
+
+      try {
+        const response = await fetch(`${serverUrl}/render`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html }),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${response.status}`);
+        }
+
+        renderedBlob = await response.blob();
+        const previewUrl = URL.createObjectURL(renderedBlob);
+        renderPreviewImg.src = previewUrl;
+        renderPreview.style.display = 'block';
+        renderUploadBtn.disabled = false;
+        showRenderResult('Screenshot generated. Fill details and click Upload.', false);
+      } catch (error) {
+        showRenderResult(`Render failed: ${error.message}. Is the render server running?`, true);
+      } finally {
+        renderBtn.disabled = false;
+        renderBtn.textContent = 'Generate Screenshot';
+      }
+    });
+
+    renderUploadBtn.addEventListener('click', async () => {
+      const url = apiBaseUrl();
+      const secret = adminSecret.value.trim();
+
+      if (!url) { showRenderResult('Set the API URL in Connection section first.', true); return; }
+      if (!secret) { showRenderResult('Enter your admin secret in Connection section.', true); return; }
+      if (!renderedBlob) { showRenderResult('Generate a screenshot first.', true); return; }
+      if (!renderTitle.value.trim()) { showRenderResult('Enter a title.', true); return; }
+      if (!renderCategory.value) { showRenderResult('Select a category.', true); return; }
+
+      renderUploadBtn.disabled = true;
+      renderUploadBtn.textContent = 'Uploading...';
+
+      try {
+        const tags = renderTags.value.split(',').map((t) => t.trim()).filter(Boolean);
+        const file = new File([renderedBlob], 'screenshot.png', { type: 'image/png' });
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('metadata', JSON.stringify({
+          title: renderTitle.value.trim(),
+          category: renderCategory.value,
+          platforms: renderPlatform.value.split(','),
+          styleTags: tags,
+          prompt: renderPrompt.value.trim(),
+        }));
+
+        const response = await fetch(`${url}/admin/upload`, {
+          method: 'POST',
+          headers: { 'X-Admin-Secret': secret },
+          body: formData,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+
+        showRenderResult(`Uploaded ${data.title}.`, false);
+        await checkConnection();
+      } catch (error) {
+        showRenderResult(error.message, true);
+      } finally {
+        renderUploadBtn.disabled = false;
+        renderUploadBtn.textContent = 'Upload Design';
+      }
+    });
+
+    refreshDesigns.addEventListener('click', checkConnection);
+    if (apiUrl.value) checkConnection();
+
+    // ── Analytics & Feedback ────────────────────────────────────────────
+    const refreshAnalytics = $('#refreshAnalytics');
+    const refreshFeedback = $('#refreshFeedback');
+
+    function rateClass(rate) {
+      if (rate >= 40) return 'high';
+      if (rate >= 15) return 'mid';
+      return 'low';
+    }
+
+    function starsHtml(n) {
+      if (!n) return '';
+      return '<span class="stars">' + '★'.repeat(n) + '☆'.repeat(5 - n) + '</span>';
+    }
+
+    async function loadAnalytics() {
+      const url = apiBaseUrl();
+      const secret = adminSecret.value.trim();
+      if (!url || !secret) return;
+
+      try {
+        const res = await fetch(`${url}/admin/analytics`, {
+          headers: { 'X-Admin-Secret': secret },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const designs = data.designs || {};
+        const byCategory = data.byCategory || {};
+        const entries = Object.entries(designs);
+
+        // Summary
+        let totalViews = 0, totalCopies = 0;
+        for (const [, d] of entries) { totalViews += d.views; totalCopies += d.copies; }
+        $('#totalViews').textContent = totalViews.toLocaleString();
+        $('#totalCopies').textContent = totalCopies.toLocaleString();
+        $('#totalRate').textContent = totalViews ? Math.round((totalCopies / totalViews) * 100) + '%' : '—';
+
+        // Feedback count
+        try {
+          const fRes = await fetch(`${url}/admin/feedback`, {
+            headers: { 'X-Admin-Secret': secret },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (fRes.ok) {
+            const fb = await fRes.json();
+            $('#totalFeedback').textContent = (Array.isArray(fb) ? fb.length : 0).toString();
+          }
+        } catch {}
+
+        // Category cards
+        const catGrid = $('#categoryStats');
+        const catEntries = Object.entries(byCategory).sort((a, b) => b[1].copies - a[1].copies);
+        if (catEntries.length === 0) {
+          catGrid.innerHTML = '<div class="catalog-empty" style="grid-column:1/-1;">No category data yet.</div>';
+        } else {
+          catGrid.innerHTML = catEntries.map(([cat, d]) => {
+            const rate = d.views ? Math.round((d.copies / d.views) * 100) : 0;
+            return `<div class="category-card">
+              <div class="name">${cat}</div>
+              <div class="stat-line">Views: <strong>${d.views}</strong></div>
+              <div class="stat-line">Copies: <strong>${d.copies}</strong></div>
+              <div class="stat-line">Copy Rate: <strong class="rate ${rateClass(rate)}">${rate}%</strong></div>
+            </div>`;
+          }).join('');
+        }
+
+        // Design table
+        const tbody = $('#designStats tbody');
+        const sorted = entries.sort((a, b) => b[1].copies - a[1].copies);
+        if (sorted.length === 0) {
+          $('#designStats').style.display = 'none';
+          $('#analyticsEmpty').style.display = 'block';
+        } else {
+          $('#designStats').style.display = 'table';
+          $('#analyticsEmpty').style.display = 'none';
+          tbody.innerHTML = sorted.map(([id, d]) => {
+            const rate = d.views ? Math.round((d.copies / d.views) * 100) : 0;
+            return `<tr>
+              <td>${id}</td>
+              <td>${d.category || '—'}</td>
+              <td>${d.views}</td>
+              <td>${d.copies}</td>
+              <td><span class="rate ${rateClass(rate)}">${rate}%</span></td>
+            </tr>`;
+          }).join('');
+        }
+      } catch (err) {
+        console.error('Analytics load failed:', err);
+      }
+    }
+
+    async function loadFeedback() {
+      const url = apiBaseUrl();
+      const secret = adminSecret.value.trim();
+      if (!url || !secret) return;
+
+      try {
+        const res = await fetch(`${url}/admin/feedback`, {
+          headers: { 'X-Admin-Secret': secret },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const feedback = await res.json();
+        const list = $('#feedbackList');
+
+        if (!Array.isArray(feedback) || feedback.length === 0) {
+          list.innerHTML = '<div class="feedback-empty">No feedback submitted yet.</div>';
+          return;
+        }
+
+        list.innerHTML = feedback.map(f => {
+          const date = f.timestamp ? new Date(f.timestamp).toLocaleString() : '—';
+          return `<div class="feedback-item">
+            <div class="meta">
+              <span>${f.designId} · ${f.category || '—'}</span>
+              <span>${date}</span>
+            </div>
+            ${f.rating ? `<div style="margin-bottom:4px;">${starsHtml(f.rating)}</div>` : ''}
+            <div class="msg">${escapeHtml(f.message)}</div>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        console.error('Feedback load failed:', err);
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    refreshAnalytics.addEventListener('click', loadAnalytics);
+    refreshFeedback.addEventListener('click', loadFeedback);
+
+    // Load analytics + feedback on connect
+    const origCheckConnection = checkConnection;
+    checkConnection = async function() {
+      await origCheckConnection();
+      const url = apiBaseUrl();
+      const secret = adminSecret.value.trim();
+      if (url && secret) {
+        loadAnalytics();
+        loadFeedback();
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {
-    "name": "mastui",
-    "short_name": "mastui",
+    "name": "MastUI",
+    "short_name": "MastUI",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

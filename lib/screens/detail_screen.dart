@@ -156,31 +156,35 @@ class _DetailScreenState extends State<DetailScreen> {
                   category: widget.screens[index].category,
                 );
               },
-              itemBuilder: (context, index) => Center(
-                child: AspectRatio(
-                  aspectRatio: 390 / 844,
-                  child: GestureDetector(
-                    onTap: _openFullscreen,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSubtle,
-                        borderRadius: BorderRadius.circular(AppRadius.card),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          DesignPreview(
-                            design: screens[index],
-                            alignment: Alignment.center,
-                          ),
-                        ],
+              itemBuilder: (context, index) {
+                final isWeb = screens[index].platforms.contains('web');
+                return Center(
+                  child: AspectRatio(
+                    aspectRatio: isWeb ? 16 / 9 : 390 / 844,
+                    child: GestureDetector(
+                      onTap: _openFullscreen,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(AppRadius.card),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            DesignPreview(
+                              design: screens[index],
+                              alignment: Alignment.center,
+                              fit: isWeb ? BoxFit.cover : BoxFit.contain,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
           if (isPack) ...[

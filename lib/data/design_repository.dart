@@ -54,9 +54,11 @@ class DesignRepository {
   }
 
   List<UiDesign> _parseCatalog(String json) {
-    return (jsonDecode(json) as List<dynamic>)
+    final list = (jsonDecode(json) as List<dynamic>)
         .map((entry) => UiDesign.fromJson(entry as Map<String, dynamic>))
         .toList();
+    list.shuffle();
+    return list;
   }
 
   /// Category filter values for the chip row — 'All' plus whatever the
@@ -67,15 +69,14 @@ class DesignRepository {
       ];
 
   /// Groups the catalog's pack screens into style packs, keeping each pack's
-  /// screens in their designed order. Legacy single-screen entries (no packId)
-  /// are ignored — the app browses packs only.
+  /// screens in their designed order.
   static List<StylePack> packsOf(List<UiDesign> designs) {
     final byPack = <String, List<UiDesign>>{};
     for (final d in designs) {
       final packId = d.packId;
       if (packId != null) (byPack[packId] ??= []).add(d);
     }
-    final packs = [
+    return [
       for (final entry in byPack.entries)
         StylePack(
           id: entry.key,
@@ -83,8 +84,34 @@ class DesignRepository {
           screens: entry.value..sort((a, b) => a.order.compareTo(b.order)),
         ),
     ];
-    packs.sort((a, b) => a.name.compareTo(b.name));
-    return packs;
+  }
+
+  /// Extracts all displayable items (both StylePacks and standalone UiDesigns)
+  /// maintaining the randomized order of [designs].
+  static List<Object> itemsOf(List<UiDesign> designs) {
+    final addedPacks = <String>{};
+    final items = <Object>[];
+
+    for (final d in designs) {
+      final packId = d.packId;
+      if (packId != null) {
+        if (!addedPacks.contains(packId)) {
+          addedPacks.add(packId);
+          final packScreens = designs.where((x) => x.packId == packId).toList()
+            ..sort((a, b) => a.order.compareTo(b.order));
+          items.add(
+            StylePack(
+              id: packId,
+              name: packScreens.first.packName ?? packId,
+              screens: packScreens,
+            ),
+          );
+        }
+      } else {
+        items.add(d);
+      }
+    }
+    return items;
   }
 }
 

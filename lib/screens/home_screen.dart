@@ -245,43 +245,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<StylePack> _visiblePacks(List<StylePack> packs) {
+  List<Object> _visibleItems(List<Object> items) {
     final q = _query.trim().toLowerCase();
-    return packs.where((p) {
-      if (_selectedCategory != 'All') {
-        final hasCategory = p.screens.any(
-          (s) => s.category.toLowerCase() == _selectedCategory.toLowerCase(),
-        );
-        if (!hasCategory) return false;
+    return items.where((item) {
+      if (item is StylePack) {
+        if (_selectedCategory != 'All') {
+          final hasCategory = item.screens.any(
+            (s) => s.category.toLowerCase() == _selectedCategory.toLowerCase(),
+          );
+          if (!hasCategory) return false;
+        }
+        if (_selectedPlatform != 'All') {
+          if (!item.platforms.contains(_selectedPlatform.toLowerCase())) return false;
+        }
+        if (q.isNotEmpty) {
+          return item.name.toLowerCase().contains(q) ||
+              item.tags.any((t) => t.toLowerCase().contains(q)) ||
+              item.platforms.any((platform) => platform.contains(q));
+        }
+        return true;
+      } else if (item is UiDesign) {
+        if (_selectedCategory != 'All') {
+          if (item.category.toLowerCase() != _selectedCategory.toLowerCase()) return false;
+        }
+        if (_selectedPlatform != 'All') {
+          if (!item.platforms.contains(_selectedPlatform.toLowerCase())) return false;
+        }
+        if (q.isNotEmpty) {
+          return item.title.toLowerCase().contains(q) ||
+              item.category.toLowerCase().contains(q) ||
+              item.styleTags.any((t) => t.toLowerCase().contains(q)) ||
+              item.platforms.any((platform) => platform.contains(q));
+        }
+        return true;
       }
-      if (_selectedPlatform != 'All') {
-        if (!p.platforms.contains(_selectedPlatform.toLowerCase())) return false;
-      }
-      if (q.isNotEmpty) {
-        return p.name.toLowerCase().contains(q) ||
-            p.tags.any((t) => t.toLowerCase().contains(q)) ||
-            p.platforms.any((platform) => platform.contains(q));
-      }
-      return true;
-    }).toList();
-  }
-
-  List<UiDesign> _visibleDesigns(List<UiDesign> designs) {
-    final q = _query.trim().toLowerCase();
-    return designs.where((d) {
-      if (_selectedCategory != 'All') {
-        if (d.category.toLowerCase() != _selectedCategory.toLowerCase()) return false;
-      }
-      if (_selectedPlatform != 'All') {
-        if (!d.platforms.contains(_selectedPlatform.toLowerCase())) return false;
-      }
-      if (q.isNotEmpty) {
-        return d.title.toLowerCase().contains(q) ||
-            d.category.toLowerCase().contains(q) ||
-            d.styleTags.any((t) => t.toLowerCase().contains(q)) ||
-            d.platforms.any((platform) => platform.contains(q));
-      }
-      return true;
+      return false;
     }).toList();
   }
 
@@ -307,15 +305,12 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }
 
-            final allPacks = DesignRepository.packsOf(snapshot.data!);
-            final packs = _visiblePacks(allPacks);
-            // Pack screens are browsed via their pack; only standalone
-            // designs (no packId) get their own card in the grid.
-            final singles = _visibleDesigns(
-              snapshot.data!.where((d) => d.packId == null).toList(),
-            );
-            final items = <Object>[...packs, ...singles];
-            final totalScreens = packs.fold<int>(0, (sum, p) => sum + p.screens.length) + singles.length;
+            final allItems = DesignRepository.itemsOf(snapshot.data!);
+            final items = _visibleItems(allItems);
+            final totalScreens = items.fold<int>(0, (sum, item) {
+              if (item is StylePack) return sum + item.screens.length;
+              return sum + 1;
+            });
 
             return RefreshIndicator(
               onRefresh: _onRefresh,

@@ -230,6 +230,8 @@ async function main() {
 
   const client = createClient(args.provider);
   const browser = await chromium.launch();
+  let generated = 0;
+  let failed = 0;
 
   try {
     console.log('  fetching remote catalog...');
@@ -241,9 +243,6 @@ async function main() {
       allSingleTemplates = allSingleTemplates.filter((t) => t.platforms.includes(args.platform));
     }
     console.log(`  ${allSingleTemplates.length} single templates | ${buildPacks().length} packs available\n`);
-
-    let generated = 0;
-    let failed = 0;
 
     if (args.loop) {
       console.log(`  continuous mode (interval: ${args.interval}s) — Ctrl+C to stop\n`);
