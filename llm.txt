@@ -1,0 +1,33 @@
+# MastUI — Free UI Design Prompts & Mockups for Mobile and Web
+
+MastUI is a free app that gives developers, designers, and creators access to a large library of ready-to-use UI design prompts and high-quality mockups for mobile and web apps. Every design comes with a detailed, copyable prompt that you can paste directly into AI coding tools like Cursor, v0, Lovable, Claude, ChatGPT, or any other code generator to get production-quality UI code.
+
+## What MastUI Offers
+
+- **187 handcrafted UI designs** across 8 categories: Home, Login, Sign Up, Dashboard, Profile, Settings, Search, and Notifications.
+- **15 distinct visual styles** including Modern Minimalist, Glassmorphism, Neubrutalism, Neon Cyber, Soft Dark, Luxury Dark, Material You, iOS Native, Retro Y2K, Vibrant Gradient, Warm Editorial, Organic Nature, Soft Pastel, Technical Mono, and Claymorphism.
+- **Both mobile and web layouts** — every design is built for real-world app screens, not abstract concepts.
+- **Detailed design prompts** — each prompt specifies the exact layout, typography, color palette with hex codes, spacing, shadows, border radii, and animation timing. Paste it into any AI tool and get a matching UI.
+- **One-tap copy** — open any design, tap the copy button, and the full prompt is on your clipboard ready to use.
+- **Design packs** — related screens (login, home, profile, settings, search, notifications) are grouped under a single visual style so you can build a consistent app theme.
+
+## Who It's For
+
+- **Frontend developers** who want to skip the design phase and get straight to building with AI-assisted coding.
+- **Solo founders and indie hackers** who need professional-looking UI without hiring a designer.
+- **UI/UX designers** looking for inspiration or a quick starting point for a new project.
+- **Anyone using AI code generators** who wants better, more specific prompts that produce accurate results.
+
+## How It Works
+
+1. Browse the library by category or visual style.
+2. Preview the design mockup on screen.
+3. Tap "Copy Prompt" to copy the full design specification.
+4. Paste the prompt into your preferred AI coding tool.
+5. Get a pixel-accurate UI ready for your project.
+
+## Why MastUI
+
+Most AI coding tools produce generic output when given vague prompts. MastUI prompts are engineered with precise design specifications — exact colors, font sizes, spacing values, shadow depths, and layout instructions — so the AI generates UI that looks intentional and polished, not default. Every prompt is crafted to produce results with 95-99% visual fidelity to the mockup.
+
+All designs and prompts are free to use. No account required. No paywall.
