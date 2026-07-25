@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../models/ui_design.dart';
@@ -34,14 +35,14 @@ class DesignPreview extends StatelessWidget {
 
     final url = design.imageUrl;
     if (url != null) {
-      return Image.network(
-        url,
+      return CachedNetworkImage(
+        imageUrl: url,
         fit: fit,
         alignment: alignment,
         width: double.infinity,
-        loadingBuilder: (context, child, progress) =>
-            progress == null ? child : const _Placeholder(),
-        errorBuilder: (context, error, stack) => const _Placeholder(),
+        placeholder: (context, url) => const _Placeholder(),
+        errorWidget: (context, url, error) => const _Placeholder(),
+        memCacheWidth: 400,
       );
     }
 

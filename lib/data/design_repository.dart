@@ -1,15 +1,11 @@
 import 'dart:convert';
 
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 
 import '../models/ui_design.dart';
 
-/// Loads the design catalog.
-///
-/// Tries network first (Cloudflare Worker + R2), falls back to bundled assets.
+/// Loads the design catalog from the Cloudflare Worker.
 class DesignRepository {
-  static const _catalogAsset = 'assets/catalog.json';
   static const _catalogUrl =
       'https://mastui-api.sanjeev-yadav1201.workers.dev/catalog';
 
@@ -25,32 +21,17 @@ class DesignRepository {
     final cached = _cache;
     if (cached != null) return cached;
 
-    // Try network first (always fresh from Cloudflare Worker + R2)
-    try {
-      final response = await http
-          .get(Uri.parse(_catalogUrl))
-          .timeout(const Duration(seconds: 5));
+    final response = await http
+        .get(Uri.parse(_catalogUrl))
+        .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
-        final designs = _parseCatalog(response.body);
-        _cache = designs;
-        return designs;
-      }
-    } catch (_) {}
+    if (response.statusCode == 200) {
+      final designs = _parseCatalog(response.body);
+      _cache = designs;
+      return designs;
+    }
 
-    // Fallback to bundled assets (offline mode)
-    try {
-      return await _loadFromAssets();
-    } catch (_) {}
-
-    return [];
-  }
-
-  Future<List<UiDesign>> _loadFromAssets() async {
-    final raw = await rootBundle.loadString(_catalogAsset);
-    final designs = _parseCatalog(raw);
-    _cache = designs;
-    return designs;
+    throw Exception('Failed to load designs (${response.statusCode})');
   }
 
   List<UiDesign> _parseCatalog(String json) {

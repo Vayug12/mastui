@@ -27,22 +27,57 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedCategory = 'All';
   String _selectedPlatform = 'All';
 
+  static const _pageSize = 20;
+  int _visibleCount = _pageSize;
+  bool _isLoadingMore = false;
+  final _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _designs = _repository.load();
+    _scrollController.addListener(_onScroll);
   }
 
   Future<void> _onRefresh() async {
     _repository.refresh();
     setState(() {
       _designs = _repository.load();
+      _visibleCount = _pageSize;
     });
     await _designs;
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    final snapshot = await _designs;
+    final allItems = DesignRepository.itemsOf(snapshot);
+    final items = _visibleItems(allItems);
+    if (_visibleCount >= items.length) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    // Simulate a short delay for smooth UX
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    setState(() {
+      _visibleCount += _pageSize;
+      _isLoadingMore = false;
+    });
+  }
+
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -215,6 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           setState(() {
                             _selectedCategory = tempCategory;
                             _selectedPlatform = tempPlatform;
+                            _visibleCount = _pageSize;
                           });
                           Navigator.of(ctx).pop();
                         },
@@ -293,10 +329,43 @@ class _HomeScreenState extends State<HomeScreen> {
           future: _designs,
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return _Message(
-                icon: Icons.error_outline,
-                title: 'Could not load designs',
-                body: '${snapshot.error}',
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 32, color: AppColors.textHint),
+                      const SizedBox(height: 14),
+                      Text('Could not load designs',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _repository.refresh();
+                            _designs = _repository.load();
+                          });
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
             if (!snapshot.hasData) {
@@ -312,10 +381,14 @@ class _HomeScreenState extends State<HomeScreen> {
               return sum + 1;
             });
 
+            final visibleCount = _visibleCount.clamp(0, items.length);
+            final hasMore = visibleCount < items.length;
+
             return RefreshIndicator(
               onRefresh: _onRefresh,
               color: AppColors.primary,
               child: CustomScrollView(
+                controller: _scrollController,
                 slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
@@ -375,7 +448,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: TextField(
                               controller: _searchController,
                               focusNode: _searchFocusNode,
-                              onChanged: (v) => setState(() => _query = v),
+                              onChanged: (v) => setState(() {
+                                    _query = v;
+                                    _visibleCount = _pageSize;
+                                  }),
                               onSubmitted: (_) => _searchFocusNode.unfocus(),
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppColors.textPrimary,
@@ -407,6 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               setState(() {
                                 _showSearch = false;
                                 _query = '';
+                                _visibleCount = _pageSize;
                                 _searchController.clear();
                               });
                             },
@@ -473,9 +550,44 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? _PackCard(pack: item)
                               : _DesignCard(design: item as UiDesign);
                         },
-                        childCount: items.length,
+                        childCount: visibleCount,
                       ),
                     ),
+                  ),
+
+                // Loading / end-of-list footer
+                if (items.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _isLoadingMore
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          )
+                        : !hasMore
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 24),
+                                child: Center(
+                                  child: Text(
+                                    "You've seen all designs",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppColors.textHint,
+                                        ),
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
                   ),
               ],
               ),

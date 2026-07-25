@@ -36,7 +36,10 @@ class _AdBannerState extends State<AdBanner> {
         onAdLoaded: (_) {
           if (mounted) setState(() => _loaded = true);
         },
-        onAdFailedToLoad: (ad, _) {
+        onAdFailedToLoad: (ad, error) {
+          debugPrint(
+            'AdMob banner failed to load: ${error.code} ${error.domain} ${error.message}',
+          );
           ad.dispose();
           if (mounted) setState(() => _ad = null);
         },
