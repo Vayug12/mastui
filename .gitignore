@@ -67,3 +67,15 @@ key.properties
 
 # Logs
 *.log
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+*.webp
+
+# Design mockups
+assets/designs/
