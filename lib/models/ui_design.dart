@@ -31,11 +31,10 @@ class UiDesign {
   /// Position within the pack's screen set.
   final int order;
 
-  /// Bundled asset path, for designs shipped inside the APK.
+  /// Bundled asset path, used only by local development catalogs.
   final String? imageAsset;
 
-  /// R2/CDN URL, for designs fetched over the air. Takes second place to
-  /// [imageAsset] so a bundled copy renders instantly and works offline.
+  /// R2/CDN URL, for designs fetched over the air.
   final String? imageUrl;
 
   factory UiDesign.fromJson(Map<String, dynamic> json) => UiDesign(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 
 import '../models/ui_design.dart';
-import '../widgets/design_preview.dart';
 
 /// Black fullscreen gallery: pinch or double-tap to zoom, swipe horizontally
 /// between a pack's screens. Pops with the index the user ended on so the
@@ -17,15 +18,13 @@ class FullscreenViewerScreen extends StatefulWidget {
   final int initialIndex;
 
   @override
-  State<FullscreenViewerScreen> createState() => _FullscreenViewerScreenState();
+  State<FullscreenViewerScreen> createState() =>
+      _FullscreenViewerScreenState();
 }
 
 class _FullscreenViewerScreenState extends State<FullscreenViewerScreen> {
   late final PageController _controller;
-  final _transform = TransformationController();
   late int _index;
-  bool _zoomed = false;
-  TapDownDetails? _doubleTapDetails;
 
   @override
   void initState() {
@@ -37,33 +36,38 @@ class _FullscreenViewerScreenState extends State<FullscreenViewerScreen> {
   @override
   void dispose() {
     _controller.dispose();
-    _transform.dispose();
     super.dispose();
   }
 
-  void _syncZoomState() {
-    final zoomed = _transform.value.getMaxScaleOnAxis() > 1.01;
-    if (zoomed != _zoomed) setState(() => _zoomed = zoomed);
-  }
-
-  void _resetZoom() {
-    _transform.value = Matrix4.identity();
-    if (_zoomed) setState(() => _zoomed = false);
-  }
-
-  void _handleDoubleTap() {
-    if (_zoomed) {
-      _resetZoom();
-      return;
+  PhotoViewGalleryPageOptions _buildPage(BuildContext context, int index) {
+    final design = widget.screens[index];
+    final url = design.imageUrl;
+    if (url != null) {
+      return PhotoViewGalleryPageOptions(
+        imageProvider: NetworkImage(url),
+        initialScale: PhotoViewComputedScale.contained,
+        minScale: PhotoViewComputedScale.contained,
+        maxScale: PhotoViewComputedScale.covered * 4,
+      );
     }
-    final position = _doubleTapDetails?.localPosition;
-    if (position == null) return;
-    const scale = 2.5;
-    _transform.value = Matrix4.identity()
-      ..translateByDouble(
-          -position.dx * (scale - 1), -position.dy * (scale - 1), 0, 1)
-      ..scaleByDouble(scale, scale, scale, 1);
-    setState(() => _zoomed = true);
+
+    final asset = design.imageAsset;
+    if (asset != null) {
+      return PhotoViewGalleryPageOptions(
+        imageProvider: AssetImage(asset),
+        initialScale: PhotoViewComputedScale.contained,
+        minScale: PhotoViewComputedScale.contained,
+        maxScale: PhotoViewComputedScale.covered * 4,
+      );
+    }
+
+    return PhotoViewGalleryPageOptions.customChild(
+      child: Container(
+        color: Colors.black,
+        alignment: Alignment.center,
+        child: const Icon(Icons.image_outlined, color: Colors.white24, size: 48),
+      ),
+    );
   }
 
   @override
@@ -71,7 +75,6 @@ class _FullscreenViewerScreenState extends State<FullscreenViewerScreen> {
     final screens = widget.screens;
     final isPack = screens.length > 1;
 
-    // System back must also report the final index, not just the close button.
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -82,36 +85,18 @@ class _FullscreenViewerScreenState extends State<FullscreenViewerScreen> {
         body: Stack(
           children: [
             Positioned.fill(
-              child: PageView.builder(
-                controller: _controller,
-                // While zoomed, one-finger drags pan the image instead of
-                // switching pages.
-                physics: _zoomed
-                    ? const NeverScrollableScrollPhysics()
-                    : const PageScrollPhysics(),
+              child: PhotoViewGallery.builder(
+                pageController: _controller,
                 itemCount: screens.length,
-                onPageChanged: (index) {
-                  _resetZoom();
-                  setState(() => _index = index);
-                },
-                itemBuilder: (context, index) => GestureDetector(
-                  onDoubleTapDown: (details) => _doubleTapDetails = details,
-                  onDoubleTap: _handleDoubleTap,
-                  child: InteractiveViewer(
-                    // Neighbouring pages are pre-built; only the visible one
-                    // may own the shared transform.
-                    transformationController:
-                        index == _index ? _transform : null,
-                    minScale: 1.0,
-                    maxScale: 5.0,
-                    onInteractionEnd: (_) => _syncZoomState(),
-                    child: Center(
-                      child: DesignPreview(
-                        design: screens[index],
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                      ),
-                    ),
+                builder: _buildPage,
+                backgroundDecoration:
+                    const BoxDecoration(color: Colors.black),
+                onPageChanged: (index) => setState(() => _index = index),
+                scrollPhysics: const BouncingScrollPhysics(),
+                loadingBuilder: (context, event) => const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
                   ),
                 ),
               ),
@@ -124,16 +109,19 @@ class _FullscreenViewerScreenState extends State<FullscreenViewerScreen> {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
                         color: Colors.white,
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.black.withValues(alpha: 0.4),
+                          backgroundColor:
+                              Colors.black.withValues(alpha: 0.4),
                         ),
-                        onPressed: () => Navigator.of(context).pop(_index),
+                        onPressed: () =>
+                            Navigator.of(context).pop(_index),
                         tooltip: 'Close',
                       ),
                       const Spacer(),
@@ -154,7 +142,6 @@ class _FullscreenViewerScreenState extends State<FullscreenViewerScreen> {
                             ),
                           ),
                         ),
-                      // Balances the close button so the counter stays centred.
                       if (isPack) const Spacer() else const SizedBox.shrink(),
                     ],
                   ),

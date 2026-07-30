@@ -91,6 +91,7 @@ for (const dir of dirs.filter((d) => d.isDirectory())) {
     styleTags: item.styleTags,
     palette: item.palette,
     prompt: item.prompt,
+    ...(item.fontFamily ? { fontFamily: item.fontFamily } : {}),
     ...(item.packId ? { packId: item.packId, packName: item.packName, order: item.order } : {}),
   };
   await fs.writeFile(path.join(OUT_DIR, id, 'metadata.json'), JSON.stringify(meta, null, 2), 'utf8');

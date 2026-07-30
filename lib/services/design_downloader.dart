@@ -28,11 +28,6 @@ abstract final class DesignDownloader {
   }
 
   static Future<Uint8List> _loadImageBytes(UiDesign design) async {
-    final asset = design.imageAsset;
-    if (asset != null) {
-      return (await rootBundle.load(asset)).buffer.asUint8List();
-    }
-
     final url = design.imageUrl;
     if (url != null) {
       try {
@@ -43,6 +38,11 @@ abstract final class DesignDownloader {
       } catch (_) {
         // Report one concise error below instead of leaking a network error.
       }
+    }
+
+    final asset = design.imageAsset;
+    if (asset != null) {
+      return (await rootBundle.load(asset)).buffer.asUint8List();
     }
 
     throw const DesignDownloadException('This design image is unavailable.');

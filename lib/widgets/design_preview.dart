@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import '../models/ui_design.dart';
 import '../theme/app_colors.dart';
 
-/// Renders a design's screenshot, wherever it lives.
-///
-/// Prefers the bundled asset (instant, offline) over the network URL, and falls
-/// back to a neutral placeholder so a missing image never breaks the grid.
+/// Renders a design's screenshot from Cloudflare, with a bundled asset fallback
+/// for local development catalogs.
 class DesignPreview extends StatelessWidget {
   const DesignPreview({
     super.key,
@@ -22,17 +20,6 @@ class DesignPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final asset = design.imageAsset;
-    if (asset != null) {
-      return Image.asset(
-        asset,
-        fit: fit,
-        alignment: alignment,
-        width: double.infinity,
-        errorBuilder: (context, error, stack) => const _Placeholder(),
-      );
-    }
-
     final url = design.imageUrl;
     if (url != null) {
       return CachedNetworkImage(
@@ -42,7 +29,18 @@ class DesignPreview extends StatelessWidget {
         width: double.infinity,
         placeholder: (context, url) => const _Placeholder(),
         errorWidget: (context, url, error) => const _Placeholder(),
-        memCacheWidth: 400,
+
+      );
+    }
+
+    final asset = design.imageAsset;
+    if (asset != null) {
+      return Image.asset(
+        asset,
+        fit: fit,
+        alignment: alignment,
+        width: double.infinity,
+        errorBuilder: (context, error, stack) => const _Placeholder(),
       );
     }
 

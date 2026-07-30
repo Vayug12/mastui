@@ -243,7 +243,7 @@ class _DetailScreenState extends State<DetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Works with v0, Lovable, Cursor & Claude',
+              'For best results, provide the image and the prompt to the AI',
               style: textTheme.bodySmall,
             ),
           ],

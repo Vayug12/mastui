@@ -16,6 +16,12 @@ const OPENCODE_MODEL = process.env.MASTUI_OPENCODE_MODEL; // optional, e.g. anth
 const SYSTEM_PROMPT =
   'You are a senior UI designer who writes pixel-precise, self-contained HTML mockups of mobile and web app screens. You output only a complete HTML document — never explanation, never markdown fences.';
 
+// CLI agents (opencode) run with tool permissions auto-rejected — if the model
+// tries to write/read a file instead of answering, the run aborts and stdout
+// contains the error instead of HTML. This preamble forbids tool use outright.
+const CLI_NO_TOOLS =
+  'You are being invoked as a text-only generator, not a coding agent. ALL tool use is auto-rejected and aborts the run, so do NOT use any tools — no file writes, no file reads, no shell commands. Reply directly with the requested content as plain text, nothing else.';
+
 export function createClient(provider = 'claude') {
   // Claude talks to the API via the SDK (needs ANTHROPIC_API_KEY). Codex and OpenCode
   // shell out to their CLIs, which carry their own login, so no client is needed.
@@ -62,21 +68,27 @@ function withReference(renderPrompt, referenceHtml) {
  */
 export async function generateHtml(client, item, provider = 'claude', { referenceHtml } = {}) {
   const prompt = withReference(item.renderPrompt, referenceHtml);
-  const result =
-    provider === 'claude-code'
-      ? await runClaudeCode(prompt)
-      : provider === 'codex'
-        ? await runCodex(prompt)
-        : provider === 'opencode'
-          ? await runOpencode(prompt)
-          : await runClaude(client, prompt);
+  // CLI agents occasionally ignore the no-tools instruction and get aborted on
+  // permission rejection — retry once when we don't get HTML back.
+  for (let attempt = 1; ; attempt++) {
+    const result =
+      provider === 'claude-code'
+        ? await runClaudeCode(prompt)
+        : provider === 'codex'
+          ? await runCodex(prompt)
+          : provider === 'opencode'
+            ? await runOpencode(prompt)
+            : await runClaude(client, prompt);
 
-  const html = unwrap(result.text);
-  if (!/<html/i.test(html)) {
-    throw new Error(`${provider} did not return an HTML document`);
+    const html = unwrap(result.text);
+    if (/<html/i.test(html)) {
+      return { html, usage: result.usage };
+    }
+    if (attempt >= 2 || provider === 'claude') {
+      throw new Error(`${provider} did not return an HTML document`);
+    }
+    console.log('  no HTML in response — retrying once...');
   }
-
-  return { html, usage: result.usage };
 }
 
 /** Streams because max_tokens is high enough to risk an HTTP timeout otherwise. */
@@ -136,7 +148,7 @@ async function runCodex(prompt) {
 async function runOpencode(prompt) {
   const args = ['run', '--pure'];
   if (OPENCODE_MODEL) args.push('-m', OPENCODE_MODEL);
-  const text = await runCli('opencode', args, `${SYSTEM_PROMPT}\n\n${prompt}`);
+  const text = await runCli('opencode', args, `${CLI_NO_TOOLS}\n\n${SYSTEM_PROMPT}\n\n${prompt}`);
   return { text, usage: {} };
 }
 

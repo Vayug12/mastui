@@ -94,12 +94,6 @@ function platformsFor(screen) {
   return platforms;
 }
 
-function platformDescription(screen) {
-  const platforms = platformsFor(screen);
-  if (platforms.length === 2) return 'responsive mobile and web app';
-  return platforms[0] === 'web' ? 'web app' : 'mobile app';
-}
-
 /**
  * The shelf. MastUI is a store — the whole point is that users find every kind of
  * design here, not one house style. Each entry is a self-contained visual language
@@ -114,6 +108,10 @@ export const STYLES = [
     id: 'chatgpt-minimal',
     name: 'Modern Minimalist',
     tags: ['Minimal', 'Light'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+    },
     spec: `Typography carries the hierarchy through opacity levels of a single near-black ink rather than through different colors. Cards sit on the background with almost invisible 1px borders and a very soft shadow. Corner radii: cards 16px, buttons 20px, search bar 28px. Simple outline icons with 2px stroke. Generous whitespace and Apple-inspired spacing. Flat — no gradients, no glass. Calm, premium, elegant and highly readable.`,
     palettes: [
       { id: 'ink-blue', name: 'Ink Blue', spec: `White #FFFFFF background. Ink #111111 at 100% / 72% / 45% opacity for primary / secondary / hint text. Dividers rgba(17,17,17,0.08), borders rgba(17,17,17,0.10). Accent soft blue #3B82F6.` },
@@ -125,6 +123,10 @@ export const STYLES = [
     id: 'soft-dark',
     name: 'Soft Dark',
     tags: ['Dark', 'Minimal'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+    },
     spec: `A dark canvas with slightly lighter elevated surfaces — elevation is shown by surface tone, never by shadow. Hairline 1px borders at low opacity. Cards 16px radius, buttons 20px. Outline icons, 2px stroke. Restrained, comfortable for night use — no glow, no neon.`,
     palettes: [
       { id: 'graphite', name: 'Graphite', spec: `Background #121212, surfaces #1C1C1E. Text #F5F5F5 / rgba(245,245,245,0.65) / rgba(245,245,245,0.4). Borders rgba(255,255,255,0.08). Accent periwinkle #7C9CF5.` },
@@ -136,6 +138,10 @@ export const STYLES = [
     id: 'warm-editorial',
     name: 'Warm Editorial',
     tags: ['Editorial', 'Serif'],
+    fontFamily: {
+      heading: 'Georgia, "Times New Roman", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Serif display headings (Georgia) paired with a clean sans-serif for body text. Generous line height and a large type scale. Thin 1px rules instead of card borders; no shadows. Understated, magazine-like, spacious.`,
     palettes: [
       { id: 'terracotta', name: 'Terracotta', spec: `Warm off-white #FAF7F2 background. Text #1A1614 / rgba(26,22,20,0.7). Rules rgba(26,22,20,0.12). Accent terracotta #C2603F.` },
@@ -147,6 +153,10 @@ export const STYLES = [
     id: 'neubrutal',
     name: 'Neubrutalism',
     tags: ['Bold', 'Playful'],
+    fontFamily: {
+      heading: '"Arial Black", "Helvetica Neue", "Impact", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Every card and button carries a solid 2px black border and a hard 4px offset black drop shadow with zero blur. Bold heavy sans-serif headings. Corner radius 12px. Flat color blocks, no gradients. High contrast, chunky, confident and playful.`,
     palettes: [
       { id: 'yellow-teal', name: 'Yellow Teal', spec: `Background #FDF6E3. Accent blocks #FFD23F yellow and #4ECDC4 teal. All borders and text pure black #000000.` },
@@ -158,6 +168,10 @@ export const STYLES = [
     id: 'pastel-soft',
     name: 'Soft Pastel',
     tags: ['Pastel', 'Rounded'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Rounded, friendly geometry — cards 24px radius, buttons fully pill-shaped. Soft diffuse shadows and no borders at all. Medium-weight rounded sans-serif. Gentle, approachable and airy.`,
     palettes: [
       { id: 'lavender', name: 'Lavender', spec: `Background #F6F4FF, cards #FFFFFF. Text #2E2A45 / rgba(46,42,69,0.6). Accents indigo #A5B4FC and pink #FBCFE8.` },
@@ -169,6 +183,11 @@ export const STYLES = [
     id: 'mono-technical',
     name: 'Technical Mono',
     tags: ['Mono', 'Dense'],
+    fontFamily: {
+      heading: '"SF Mono", "Cascadia Code", "Fira Code", "Consolas", monospace',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      mono: '"SF Mono", "Cascadia Code", "Fira Code", "Consolas", monospace',
+    },
     spec: `Monospace type for labels, numbers and metadata; clean sans-serif for prose. Sharp 6px corner radii. 1px solid borders, no shadows at all. The accent appears only on interactive elements. Dense, information-rich, precise — like a developer tool.`,
     palettes: [
       { id: 'slate-blue', name: 'Slate Blue', spec: `Background #F4F5F7, surfaces #FFFFFF. Text #1F2328 / #656D76. Borders #D8DBE0. Accent #2563EB.` },
@@ -180,6 +199,10 @@ export const STYLES = [
     id: 'glass',
     name: 'Glassmorphism',
     tags: ['Glass', 'Blur'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+    },
     spec: `A saturated blurred background of large soft color blobs bleeding into each other. Every surface is frosted glass: a low-opacity white fill, backdrop-filter blur(24px), a 1px rgba(255,255,255,0.25) highlight border catching light from the top-left, and 24px radius. White text with a subtle shadow for legibility. Layered depth, translucency everywhere, light and futuristic.`,
     palettes: [
       { id: 'violet-cyan', name: 'Violet Cyan', spec: `Background blobs #7C3AED violet and #06B6D4 cyan on a #1E1B4B base.` },
@@ -191,6 +214,10 @@ export const STYLES = [
     id: 'vibrant-gradient',
     name: 'Vibrant Gradient',
     tags: ['Gradient', 'Bold'],
+    fontFamily: {
+      heading: '"Arial Black", "Helvetica Neue", "Impact", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Bold full-bleed gradients are the primary design element, with a second gradient reserved for buttons. White cards float on top at 20px radius with generous colored shadows tinted to match the gradient beneath them. Heavy bold sans-serif headings in white. Energetic, saturated, confident.`,
     palettes: [
       { id: 'coral-slate', name: 'Coral Slate', spec: `Main gradient #FF6B6B coral into #556270 slate. Button gradient #4ECDC4 into #C7F464.` },
@@ -202,6 +229,11 @@ export const STYLES = [
     id: 'neon-cyber',
     name: 'Neon Cyber',
     tags: ['Neon', 'Dark'],
+    fontFamily: {
+      heading: '"SF Mono", "Cascadia Code", "Courier New", monospace',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      mono: '"SF Mono", "Cascadia Code", "Courier New", monospace',
+    },
     spec: `A near-black canvas with a faint grid or scanline texture. Two neon accents that actually glow — each carries a matching outer box-shadow, and key numbers get a text glow. Thin 1px neon borders on cards. Monospace or wide-tracked uppercase labels. High-contrast, electric, cyberpunk.`,
     palettes: [
       { id: 'cyan-magenta', name: 'Cyan Magenta', spec: `Background #0A0A0F, text #E8E8F0. Neons #00F0FF cyan and #FF2E97 magenta.` },
@@ -213,6 +245,10 @@ export const STYLES = [
     id: 'clay-3d',
     name: 'Claymorphism',
     tags: ['3D', 'Playful'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Every element is puffy 3D clay: large 32px radii, a light inner highlight along the top edge, a soft inner shadow along the bottom, and a large diffuse outer drop shadow — as if moulded from soft plastic. Chunky rounded sans-serif. Toy-like, tactile, friendly and bouncy.`,
     palettes: [
       { id: 'lilac-candy', name: 'Lilac Candy', spec: `Background #EBE5FF, cards #F5F1FF. Text #3B3054. Accents #FF9A8B, #A0E7E5, #FFD3B6.` },
@@ -224,6 +260,10 @@ export const STYLES = [
     id: 'retro-y2k',
     name: 'Retro Y2K',
     tags: ['Retro', 'Bold'],
+    fontFamily: {
+      heading: '"Arial Black", "Impact", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Chrome and metallic silver gradient surfaces on a saturated background. Bubble-style bold rounded typography, with some headings filled by a chrome gradient. Pill shapes everywhere, star and sparkle motifs, thick white outlines. Loud, nostalgic, early-2000s optimistic.`,
     palettes: [
       { id: 'electric-blue', name: 'Electric Blue', spec: `Background #1E27E8. Accents #FF00E5 hot pink and #FFF200 yellow.` },
@@ -235,6 +275,10 @@ export const STYLES = [
     id: 'material-you',
     name: 'Material You',
     tags: ['Material', 'Android'],
+    fontFamily: {
+      heading: '"Roboto", "Segoe UI", sans-serif',
+      body: '"Roboto", "Segoe UI", sans-serif',
+    },
     spec: `Google Material 3 expressive. Large 28px radii on cards, fully rounded 20px filled buttons, tonal icon buttons on circular containers. Material Symbols-style icons. Clear elevation tiers and a visible ripple-ready feel. Native Android through and through.`,
     palettes: [
       { id: 'purple-seed', name: 'Purple Seed', spec: `Tonal palette from a #6750A4 seed: surface #FFFBFE, surface-container #F3EDF7, primary-container #EADDFF with on-primary-container #21005D.` },
@@ -246,6 +290,10 @@ export const STYLES = [
     id: 'ios-native',
     name: 'iOS Native',
     tags: ['iOS', 'System'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+    },
     spec: `Apple HIG defaults. Grouped-list background with pure white inset list cards at 10px radius. SF-style typography at iOS sizes: 34px bold large title, 17px body, 13px footnote. Full-width hairline separators inset from the left edge, chevrons on rows, a large title header. Looks like a stock iOS system app.`,
     palettes: [
       { id: 'system-blue', name: 'System Blue', spec: `Grouped background #F2F2F7, cards #FFFFFF. Label #000000, secondary #3C3C4399. Tint system blue #007AFF.` },
@@ -257,6 +305,11 @@ export const STYLES = [
     id: 'luxury-dark',
     name: 'Luxury Dark',
     tags: ['Luxury', 'Dark'],
+    fontFamily: {
+      heading: 'Georgia, "Times New Roman", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      mono: '"SF Mono", "Cascadia Code", monospace',
+    },
     spec: `The metallic accent appears only as thin 1px borders, small-caps labels and key text — never as a large fill. High-contrast serif display headings paired with wide-tracked uppercase sans-serif labels. Very generous spacing, minimal ornament, small 4px radii. Expensive, restrained, editorial — like a luxury fashion house.`,
     palettes: [
       { id: 'gold', name: 'Champagne Gold', spec: `Background #0C0C0C, surfaces #161616. Text #F5F1E8. Accent champagne gold #C6A15B.` },
@@ -268,6 +321,10 @@ export const STYLES = [
     id: 'nature-organic',
     name: 'Organic Nature',
     tags: ['Organic', 'Calm'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Organic asymmetric blob shapes and irregular border-radii (e.g. 60% 40% 55% 45%) on decorative elements. Rounded humanist sans-serif. Leaf, sun and wave line motifs. Soft natural shadows. Grounded, calm, sustainable and wholesome.`,
     palettes: [
       { id: 'forest-clay', name: 'Forest Clay', spec: `Background sand #F5F1E8, surfaces #E8E0D0. Text #2B2A26. Primary forest green #2D5A3D, accent clay #B5654B.` },
@@ -279,6 +336,10 @@ export const STYLES = [
     id: 'raw-brutalist',
     name: 'Raw Brutalist',
     tags: ['Brutalist', 'Raw'],
+    fontFamily: {
+      heading: 'system-ui, -apple-system, sans-serif',
+      body: 'system-ui, -apple-system, sans-serif',
+    },
     spec: `System default fonts at unstyled browser sizes. Zero border-radius everywhere, thick 3px solid black borders, no shadows at all. Underlined links, left-aligned everything, rows of dashes or equals signs used as section dividers instead of rules. Deliberately anti-design — reads like a raw unstyled HTML document.`,
     palettes: [
       { id: 'default-web', name: 'Default Web', spec: `Background #FFFFFF. Text #000000. Link blue #0000EE, visited purple #551A8B.` },
@@ -290,6 +351,10 @@ export const STYLES = [
     id: 'swiss-grid',
     name: 'Swiss International',
     tags: ['Grid', 'Typographic'],
+    fontFamily: {
+      heading: '"Helvetica Neue", "Arial", sans-serif',
+      body: '"Helvetica Neue", "Arial", sans-serif',
+    },
     spec: `A strict modular grid with one bold accent color used sparingly for a single element per screen. Tight-tracked Helvetica-style sans-serif, left-aligned ragged-right text. Thin 1px rules define regions instead of cards. Zero radius, zero shadow — every element sits on a precise baseline grid. Rational and disciplined.`,
     palettes: [
       { id: 'red-black', name: 'Red Black', spec: `Background #FFFFFF. Text #111111. Accent red #E30613.` },
@@ -301,6 +366,10 @@ export const STYLES = [
     id: 'memphis',
     name: 'Memphis Pattern',
     tags: ['Memphis', 'Playful'],
+    fontFamily: {
+      heading: '"Arial Black", "Helvetica Neue", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Squiggles, confetti dots and zigzag lines scattered as decorative background motifs behind flat-color geometric shapes (triangles, half-circles, squiggly underlines). Thick black outlines on every card. Bold geometric sans headings. Asymmetric, loud, 80s-postmodern clash of color and shape.`,
     palettes: [
       { id: 'primary-clash', name: 'Primary Clash', spec: `Background #FFFFFF. Shapes red #FF3366, blue #33CCFF, yellow #FFCC00. Outlines and text black #000000.` },
@@ -312,6 +381,10 @@ export const STYLES = [
     id: 'art-deco',
     name: 'Art Deco',
     tags: ['Deco', 'Elegant'],
+    fontFamily: {
+      heading: 'Georgia, "Playfair Display", serif',
+      body: '"Arial Narrow", "Helvetica Neue", sans-serif',
+    },
     spec: `Symmetrical geometric ornament — sunburst and fan motifs framing cards, stepped ziggurat edges on headers. Thin metallic-line borders and dividers. Tall elegant serif display type with wide letter-spacing for headings, condensed sans for body. Opulent, symmetrical, jazz-age glamour.`,
     palettes: [
       { id: 'black-gold', name: 'Black Gold', spec: `Background #0D0D0D, surfaces #161616. Text #F3EFE3. Accent gold #C9A24B.` },
@@ -323,6 +396,10 @@ export const STYLES = [
     id: 'vaporwave',
     name: 'Vaporwave',
     tags: ['Vaporwave', 'Retro'],
+    fontFamily: {
+      heading: '"Courier New", monospace',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `A gradient sky background fading into a horizon crossed by a neon grid, with classical-statue-bust and palm-tree silhouettes as decorative accents. Chrome-outlined headline text. Thin neon-pink grid lines throughout. Nostalgic 90s-internet, dreamlike, softly glitchy.`,
     palettes: [
       { id: 'pink-cyan-purple', name: 'Pink Cyan Purple', spec: `Sky gradient #FF71CE pink into #01CDFE cyan over #2D1B4E purple base. Grid lines #FF71CE.` },
@@ -334,6 +411,10 @@ export const STYLES = [
     id: 'cyber-noir',
     name: 'Cyber Noir',
     tags: ['Noir', 'Dark'],
+    fontFamily: {
+      heading: '"Arial Narrow", "Helvetica Neue", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `A near-black canvas lit by a single cold key light — most of the UI stays in deep shadow with one bright focal element per screen. Sharp thin borders, no glow. Condensed uppercase sans for labels. Moody, cinematic, restrained high-contrast — closer to film noir than cyberpunk neon.`,
     palettes: [
       { id: 'cold-blue', name: 'Cold Blue', spec: `Background #08090C, surfaces #101318. Text #DCE3EC. Key light #6FA8FF.` },
@@ -345,6 +426,10 @@ export const STYLES = [
     id: 'skeuomorphic',
     name: 'Skeuomorphic',
     tags: ['Skeuomorphic', 'Realistic'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+    },
     spec: `Buttons and cards mimic real-world material — brushed-metal gradients, a glossy top highlight on buttons, and realistic drop shadows with a consistent light direction. Rounded 8px corners. Detailed and tactile, in the vein of pre-flat-design (iOS 6 era) interfaces.`,
     palettes: [
       { id: 'leather-brown', name: 'Leather Brown', spec: `Background #E9DCC9, surfaces gradient #F5EBD8 to #D9C6A3. Text #3A2A18. Accent brass #B08A3E.` },
@@ -356,6 +441,10 @@ export const STYLES = [
     id: 'flat-2',
     name: 'Flat Design 2.0',
     tags: ['Flat', 'Illustration'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Large soft-color geometric illustration blocks with simple rounded blob-people figures as decorative accents. Flat solid-fill cards at 12px radius, no shadow, no gradient, no texture. Confident single-weight sans-serif. Clean, friendly, corporate-startup illustration style.`,
     palettes: [
       { id: 'coral-navy', name: 'Coral Navy', spec: `Background #FFFFFF, surfaces #F5F6F8. Text #14213D. Illustration coral #FF6F59 and navy #14213D.` },
@@ -367,6 +456,10 @@ export const STYLES = [
     id: 'duotone',
     name: 'Duotone',
     tags: ['Duotone', 'Photo'],
+    fontFamily: {
+      heading: '"Arial Black", "Helvetica Neue", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Every illustration or photo placeholder renders as a two-color duotone block (a dark shadow tone plus a bright highlight tone) — no other color appears except in these duotone areas and one accent. Bold condensed headline type. High-contrast, editorial, graphic-poster feel.`,
     palettes: [
       { id: 'navy-orange', name: 'Navy Orange', spec: `Background #FFFFFF. Duotone shadow #14213D, highlight #FF8500. Text #14213D.` },
@@ -378,6 +471,10 @@ export const STYLES = [
     id: 'kawaii',
     name: 'Kawaii Cute',
     tags: ['Cute', 'Pastel'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Rounded blob shapes with simple cute face details (dot eyes, blush marks) as decorative mascots. Bubble-rounded corners 24px and up, soft pastel fills, thick 3px white sticker-style outline. Rounded chunky typeface. Playful, childlike, sticker-book charm.`,
     palettes: [
       { id: 'mint-pink', name: 'Mint Pink', spec: `Background #FFF0F5, cards #FFFFFF. Text #4A3040. Accents mint #B8F2E6 and pink #FFC2D6.` },
@@ -389,6 +486,11 @@ export const STYLES = [
     id: 'terminal-hacker',
     name: 'Terminal Hacker',
     tags: ['Terminal', 'Hacker'],
+    fontFamily: {
+      heading: '"SF Mono", "Cascadia Code", "Fira Code", "Courier New", monospace',
+      body: '"SF Mono", "Cascadia Code", "Fira Code", "Courier New", monospace',
+      mono: '"SF Mono", "Cascadia Code", "Fira Code", "Courier New", monospace',
+    },
     spec: `Pure black background, monospace text everywhere including headings, a faint scanline overlay texture, and a blinking-cursor motif on inputs. Sharp 0px radius, thin 1px borders in the accent color. ASCII box-drawing characters used as dividers. Old-CRT-terminal, minimal, all-monospace.`,
     palettes: [
       { id: 'green-phosphor', name: 'Green Phosphor', spec: `Background #000000. Text and borders phosphor green #33FF66.` },
@@ -400,6 +502,10 @@ export const STYLES = [
     id: 'print-newspaper',
     name: 'Print Newspaper',
     tags: ['Print', 'Editorial'],
+    fontFamily: {
+      heading: 'Georgia, "Times New Roman", serif',
+      body: 'Georgia, "Times New Roman", serif',
+    },
     spec: `A multi-column text layout with a bold masthead-style headline in a condensed serif, thin black rules between columns, and a halftone-dot texture on image placeholders. Justified body text. Ink-on-newsprint, dense, classic broadsheet feel.`,
     palettes: [
       { id: 'newsprint-gray', name: 'Newsprint Gray', spec: `Background #F1EFE9. Text #1C1C1C. Rules #1C1C1C.` },
@@ -411,6 +517,10 @@ export const STYLES = [
     id: 'comic-book',
     name: 'Comic Book',
     tags: ['Comic', 'Bold'],
+    fontFamily: {
+      heading: '"Arial Black", "Impact", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Bold black outlines on every shape, halftone-dot shading in accent areas, speech-bubble-shaped callouts, and dynamic diagonal action-line motifs behind headers. Comic-style bold italic display font. Punchy, graphic-novel energy.`,
     palettes: [
       { id: 'primary-comic', name: 'Primary Comic', spec: `Background #FFF9E8. Blocks red #E5303B, yellow #FFD23F, blue #2E5EAA. Outlines black #000000.` },
@@ -422,6 +532,10 @@ export const STYLES = [
     id: 'watercolor',
     name: 'Watercolor',
     tags: ['Watercolor', 'Soft'],
+    fontFamily: {
+      heading: 'Georgia, "Playfair Display", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Soft irregular watercolor-wash blobs with visible pigment-bleed edges as background texture behind clean white cards. Hairline borders, no hard shadows. An elegant handwritten-style accent font for headings paired with clean sans body. Artistic, gentle, hand-painted.`,
     palettes: [
       { id: 'blush-sage', name: 'Blush Sage', spec: `Background wash #F8E6E6 blush and #E3EFE3 sage on #FFFFFF cards. Text #33302C.` },
@@ -433,6 +547,10 @@ export const STYLES = [
     id: 'paper-cut',
     name: 'Paper Cut',
     tags: ['Paper', 'Layered'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Layered die-cut paper shapes with soft drop shadows showing physical stacking depth, rounded card edges like cut cardstock, and a subtle paper-grain texture. Friendly rounded sans. Tactile, crafted, layered illustration style.`,
     palettes: [
       { id: 'coral-cream', name: 'Coral Cream', spec: `Background #FFF8EF, layers coral #FF8577 and cream #FFEFD6. Text #3A2A20.` },
@@ -444,6 +562,10 @@ export const STYLES = [
     id: 'isometric',
     name: 'Isometric',
     tags: ['Isometric', '3D'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Decorative isometric-3D illustration blocks (boxes, platforms) used as accent art, with flat crisp 8px-radius cards sitting above them and subtle long-cast shadows implying the isometric light angle. Clean geometric sans. Techy, dimensional, dashboard-illustration feel.`,
     palettes: [
       { id: 'blue-purple-iso', name: 'Blue Purple', spec: `Background #F5F6FA. Iso blocks blue #4C6FFF and purple #8C5CF5. Text #171A2B.` },
@@ -455,6 +577,10 @@ export const STYLES = [
     id: 'holographic',
     name: 'Holographic',
     tags: ['Holographic', 'Iridescent'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+    },
     spec: `An iridescent shifting-rainbow gradient sheen across card surfaces and buttons, like a hologram sticker, with thin white specular highlight lines at 20px card radius. White or near-white text carries a soft glow. Futuristic, shiny, collectible-card aesthetic.`,
     palettes: [
       { id: 'silver-holo', name: 'Silver Holo', spec: `Background #0E0E12. Sheen gradient #C9F7FF, #F6C9FF, #FFF6C9. Text #F5F5FA.` },
@@ -466,6 +592,10 @@ export const STYLES = [
     id: 'corporate-flat',
     name: 'Corporate Flat Illustration',
     tags: ['Corporate', 'Illustration'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Rounded flat-color human illustrations with oversized heads and limbs as decorative hero art, generously spaced clean cards at 12px radius with soft single-color shadows. Friendly geometric sans. Approachable B2B SaaS illustration style.`,
     palettes: [
       { id: 'indigo-peach', name: 'Indigo Peach', spec: `Background #FFFFFF, surfaces #F5F5FC. Illustration indigo #4F46E5 and peach #FFB199. Text #1D1B33.` },
@@ -477,6 +607,10 @@ export const STYLES = [
     id: 'dark-academia',
     name: 'Dark Academia',
     tags: ['Academia', 'Vintage'],
+    fontFamily: {
+      heading: 'Georgia, "Playfair Display", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Deep wood-brown and leather tones with ornate thin gold-foil rule lines framing cards, classic serif display headings evoking old library books, and small candle-lit vignette shading in corners. Scholarly, moody, gothic-library aesthetic.`,
     palettes: [
       { id: 'leather-gold', name: 'Leather Gold', spec: `Background #1B140F, surfaces #241B14. Text #EDE0CC. Accent gold #B08A3E.` },
@@ -488,6 +622,10 @@ export const STYLES = [
     id: 'cottagecore',
     name: 'Cottagecore',
     tags: ['Cottagecore', 'Rustic'],
+    fontFamily: {
+      heading: 'Georgia, "Playfair Display", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Soft floral-sprig line motifs as decorative borders, gingham-check texture accents, and warm cream cards at 14px radius with soft natural shadows. A cozy serif-meets-handwritten heading pairing. Rustic, wholesome, countryside warmth.`,
     palettes: [
       { id: 'cream-sage', name: 'Cream Sage', spec: `Background #FBF6EC, cards #FFFFFF. Text #3A3626. Accent sage #7C9070.` },
@@ -499,6 +637,11 @@ export const STYLES = [
     id: 'steampunk',
     name: 'Steampunk Industrial',
     tags: ['Steampunk', 'Ornate'],
+    fontFamily: {
+      heading: 'Georgia, "Playfair Display", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      mono: '"SF Mono", "Courier New", monospace',
+    },
     spec: `Brass-gear and rivet motifs as decorative corner ornaments, an aged-copper metallic gradient on accent surfaces, and thick dark-bronze beveled borders. Ornate Victorian display serif for headings, technical mono for data. Industrial, ornate, brass-and-leather.`,
     palettes: [
       { id: 'copper-charcoal', name: 'Copper Charcoal', spec: `Background #1A1613, surfaces #241E19. Text #ECE2D2. Accent copper #B5652D.` },
@@ -510,6 +653,10 @@ export const STYLES = [
     id: 'scandi-nordic',
     name: 'Scandinavian Nordic',
     tags: ['Nordic', 'Minimal'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Very pale neutral wood and linen tones, extremely restrained ornament, thin 1px warm-gray borders at 10px radius. Clean humanist sans with generous negative space. Calm, functional, hygge-inspired — warmer than pure white minimalism.`,
     palettes: [
       { id: 'birch-clay', name: 'Birch Clay', spec: `Background #F7F4EE, cards #FFFFFF. Text #2C2A26. Accent clay #B5714D.` },
@@ -521,6 +668,10 @@ export const STYLES = [
     id: 'wabi-sabi',
     name: 'Wabi-Sabi',
     tags: ['Zen', 'Organic'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Deliberately imperfect hand-drawn-feeling borders with slightly irregular line weight, a raw-linen background texture, and asymmetric generous negative space in muted earthen tones. Thin brush-stroke accent lines replace dividers. Serene, imperfect-on-purpose, Japanese minimalism.`,
     palettes: [
       { id: 'clay-ash', name: 'Clay Ash', spec: `Background #EFE9DF. Text #332F28. Accent clay #A9784F, ash gray #8A8378.` },
@@ -532,6 +683,10 @@ export const STYLES = [
     id: 'saas-clean',
     name: 'SaaS Clean',
     tags: ['SaaS', 'Corporate'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+    },
     spec: `Crisp white cards with a single vivid brand accent, 8px radius, a subtle 1px border plus a barely-visible shadow, and clean geometric sans (Inter-style). Small rounded-square icon badges with tinted backgrounds. Confident, trustworthy, modern product design.`,
     palettes: [
       { id: 'indigo-slate', name: 'Indigo Slate', spec: `Background #FFFFFF, surfaces #F8F9FB. Text #16181D. Accent indigo #4F46E5.` },
@@ -543,6 +698,11 @@ export const STYLES = [
     id: 'fintech-trust',
     name: 'Fintech Trust',
     tags: ['Fintech', 'Corporate'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      mono: '"SF Mono", "Cascadia Code", "Fira Code", monospace',
+    },
     spec: `Deep navy surfaces with crisp white data cards, thin 1px borders, tabular monospace numerals for all monetary figures, and small secure-lock iconography. 10px radius, no ornament. Serious, precise, bank-grade trustworthy.`,
     palettes: [
       { id: 'navy-white', name: 'Navy White', spec: `Background #0B1830, cards #FFFFFF. Text on dark #EAF0FA, text on card #101828. Accent #2563EB.` },
@@ -554,6 +714,11 @@ export const STYLES = [
     id: 'gaming-hud',
     name: 'Gaming HUD',
     tags: ['Gaming', 'HUD'],
+    fontFamily: {
+      heading: '"Arial Black", "Impact", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      mono: '"SF Mono", "Cascadia Code", monospace',
+    },
     spec: `Angular clipped-corner panels with diagonal-cut edges instead of rounded corners, a thin glowing accent border on active elements, a bold italic condensed display font for headings, and small hexagonal icon frames. Aggressive, competitive, in-game-overlay energy.`,
     palettes: [
       { id: 'red-black-hud', name: 'Red Black', spec: `Background #0C0C0E, panels #17171A. Text #ECECEE. Accent glow #FF2A3D.` },
@@ -565,6 +730,10 @@ export const STYLES = [
     id: 'neumorphism',
     name: 'Neumorphism',
     tags: ['Neumorphism', 'Soft'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Elements are extruded from a single-tone background using a light shadow on one side and a dark shadow on the other, creating a soft-embossed look with no borders and no separate surface color. Large 20px radii. Rounded sans. Monochrome, tactile, soft-UI.`,
     palettes: [
       { id: 'cool-gray-neu', name: 'Cool Gray', spec: `Background #E4E7EC, all surfaces the same tone. Text #3A3F47. Accent #5B7FDB.` },
@@ -576,6 +745,10 @@ export const STYLES = [
     id: 'aurora-gradient',
     name: 'Aurora Gradient',
     tags: ['Gradient', 'Ethereal'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
+    },
     spec: `Soft multi-hue aurora-like gradient washes — dreamy and translucent rather than saturated — behind clean glassy-white cards with soft shadows at 20px radius. A light modern sans-serif. Ethereal, calm, northern-lights inspired.`,
     palettes: [
       { id: 'teal-violet-aurora', name: 'Teal Violet', spec: `Aurora wash teal #5CE0C6 into violet #A78BFA over #0E1524 base. Cards #FFFFFF at low opacity.` },
@@ -587,6 +760,10 @@ export const STYLES = [
     id: 'gothic-dark',
     name: 'Gothic Dark',
     tags: ['Gothic', 'Dark'],
+    fontFamily: {
+      heading: 'Georgia, "Times New Roman", serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `A near-black background with ornate thin filigree line-art borders framing cards, blackletter-inspired display headings paired with a clean body sans, and a single deep accent used sparingly. Dramatic, ornate, dark-romantic.`,
     palettes: [
       { id: 'blood-bone', name: 'Blood Bone', spec: `Background #0C0A0A, surfaces #151212. Text #EDE7E3. Accent blood red #8A1E2B.` },
@@ -598,6 +775,10 @@ export const STYLES = [
     id: 'tropical-vibrant',
     name: 'Tropical Vibrant',
     tags: ['Tropical', 'Vibrant'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `Large leaf and palm-frond silhouette motifs as decorative background accents, a saturated warm-sun palette, and rounded 18px cards with soft colored shadows. A bold friendly rounded sans. Energetic, sunny, vacation-poster vibrant.`,
     palettes: [
       { id: 'mango-teal', name: 'Mango Teal', spec: `Background #FFF3DC. Leaf motifs teal #1E9E8C. Accent mango #FF9F1C. Text #2B2114.` },
@@ -609,6 +790,11 @@ export const STYLES = [
     id: 'blueprint',
     name: 'Blueprint',
     tags: ['Blueprint', 'Technical'],
+    fontFamily: {
+      heading: '"SF Mono", "Cascadia Code", "Courier New", monospace',
+      body: '"SF Mono", "Cascadia Code", "Courier New", monospace',
+      mono: '"SF Mono", "Cascadia Code", "Courier New", monospace',
+    },
     spec: `A deep blue canvas with a fine white grid-line texture throughout, thin white 1px construction-line borders on cards, and corner crop-mark ticks on card edges. Technical monospace for labels and measurements. Precise, drafting-table, technical-drawing feel.`,
     palettes: [
       { id: 'classic-blueprint', name: 'Classic Blueprint', spec: `Background #0F3D8A, grid lines rgba(255,255,255,0.15). Text #EAF1FF. Accent white #FFFFFF.` },
@@ -620,6 +806,10 @@ export const STYLES = [
     id: 'vintage-sepia',
     name: 'Vintage Sepia',
     tags: ['Vintage', 'Sepia'],
+    fontFamily: {
+      heading: 'Georgia, "Times New Roman", serif',
+      body: 'Georgia, "Times New Roman", serif',
+    },
     spec: `A warm sepia-toned background with a subtle film-grain and vignette texture, ornate thin double-rule borders, and a classic serif display type reminiscent of old photographs and letterpress. An aged-paper texture on card surfaces. Nostalgic, antique, old-photograph warmth.`,
     palettes: [
       { id: 'sepia-classic', name: 'Sepia Classic', spec: `Background #E9D9BC. Text #3B2E1D. Rules #6B563A.` },
@@ -631,6 +821,10 @@ export const STYLES = [
     id: 'poster-bold',
     name: 'Bold Poster',
     tags: ['Poster', 'Typographic'],
+    fontFamily: {
+      heading: '"Arial Black", "Impact", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Oversized display type is the dominant visual element — headlines span the full width and overlap other elements confidently. Flat solid color blocks with zero shadow, sharp 0px or 4px radius, and a high-contrast two-color palette per screen. Graphic, confident, gig-poster energy.`,
     palettes: [
       { id: 'red-cream', name: 'Red Cream', spec: `Background #F3E9D8. Type block red #D62828. Text #221C15.` },
@@ -642,6 +836,10 @@ export const STYLES = [
     id: 'line-art',
     name: 'Minimal Line Art',
     tags: ['LineArt', 'Minimal'],
+    fontFamily: {
+      heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      body: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     spec: `Single-weight continuous line-art illustrations are the only decorative imagery, otherwise pure white space. Hairline 1px borders, no fill colors except one accent line color. A thin elegant sans-serif. Extremely minimal, artistic, gallery-clean.`,
     palettes: [
       { id: 'black-white-line', name: 'Black White', spec: `Background #FFFFFF. Line art and text #111111.` },
@@ -653,6 +851,10 @@ export const STYLES = [
     id: 'candy-pop',
     name: 'Candy Pop',
     tags: ['Candy', 'Playful'],
+    fontFamily: {
+      heading: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+      body: '"Nunito", "SF Pro Rounded", -apple-system, sans-serif',
+    },
     spec: `A glossy candy-shell gradient fill on rounded pill buttons and cards, sprinkle and dot confetti motifs, a thick white outline, and a bubbly rounded typeface. Sweet, glossy, sugar-rush playful.`,
     palettes: [
       { id: 'bubblegum-candy', name: 'Bubblegum', spec: `Background #FFF0F6. Candy gradient #FF6FB0 into #FFB3D9. Text #3A1A2A.` },
@@ -679,10 +881,37 @@ export const PACK_SCREENS = [
 
 /** Build the prompt a MastUI user will copy into their AI coding tool. */
 export function buildUserPrompt(screen, style, palette) {
+  const fontLines = [];
+  if (style.fontFamily) {
+    if (style.fontFamily.heading) {
+      fontLines.push(`- Headings / display: ${style.fontFamily.heading}`);
+    }
+    if (style.fontFamily.body && style.fontFamily.body !== style.fontFamily.heading) {
+      fontLines.push(`- Body / labels: ${style.fontFamily.body}`);
+    }
+    if (style.fontFamily.mono) {
+      fontLines.push(`- Monospace / data: ${style.fontFamily.mono}`);
+    }
+  }
+
+  const platform = platformsFor(screen);
+  const isWeb = platform.includes('web');
+  const isMobile = platform.includes('mobile');
+  let platformLine;
+  if (isWeb && isMobile) {
+    platformLine = 'This is a RESPONSIVE design — it should work on both mobile and desktop. Use mobile layout patterns (bottom nav, stacked content) for mobile, and desktop layout patterns (sidebar/nav bar, wider content areas) for web.';
+  } else if (isWeb) {
+    platformLine = 'This is a WEB/DESKTOP app screen. Use desktop layout patterns: navigation bar or sidebar, wider content areas, hover states on buttons, larger typography. Do NOT include mobile status bars or home indicators.';
+  } else {
+    platformLine = 'This is a MOBILE app screen. Use mobile layout patterns: bottom navigation bar, stacked content, touch-friendly tap targets.';
+  }
+
   return [
     `Act like a frontend developer with 15 years of experience. I want the exact same UI with 95-99% similarity.`,
     ``,
-    `Design ${screen.brief} for a ${platformDescription(screen)}.`,
+    `Platform: ${platformLine}`,
+    ``,
+    `Design ${screen.brief}.`,
     ``,
     `Visual style — ${style.name}:`,
     style.spec,
@@ -690,6 +919,13 @@ export function buildUserPrompt(screen, style, palette) {
     `Color palette — ${palette.name}:`,
     palette.spec,
     ``,
+    ...(fontLines.length > 0
+      ? [
+          `Typography — use these exact font families:`,
+          ...fontLines,
+          ``,
+        ]
+      : []),
     `Commit fully to this style — it should be unmistakable at a glance. Use realistic content, not placeholder text. Keep animations smooth (200ms ease-out).`,
   ].join('\n');
 }
@@ -702,8 +938,8 @@ export function buildRenderPrompt(userPrompt) {
     `---`,
     `Output requirements (these apply to your response only, not to the design):`,
     `- Return a single complete HTML document, nothing else. No markdown fences, no commentary before or after.`,
-    `- All CSS inline in one <style> tag. No external requests of any kind: no CDN links, no web fonts, no remote images, no scripts. Use only system-available font families.`,
-    `- The page renders at exactly 390x844 (iPhone viewport). The body must be exactly that size with no scrolling and no margin.`,
+    `- All CSS inline in one <style> tag. No external requests of any kind: no CDN links, no web fonts, no remote images, no scripts. Use only system-available font families as specified in the Typography section above.`,
+    `- The page renders at exactly 390x844 (iPhone viewport). The body must be exactly that size with no scrolling and no margin. This is a MOBILE APP — use mobile layout patterns (bottom nav, stacked content, touch-friendly targets).`,
     `- Draw icons as inline SVG, styled to match the design above (stroke weight, fill and shape are part of the style — do not default to thin outlines). Represent photos/illustrations as placeholder blocks with correct proportions, tinted to fit the palette — never <img> tags.`,
     `- Include a realistic status bar (time, signal, wifi, battery) at the top and a home indicator at the bottom, both tinted to suit the palette.`,
     `- Use realistic placeholder content — real-sounding names, prices and copy. Never lorem ipsum, never "Label 1".`,
@@ -719,9 +955,9 @@ export function buildWebRenderPrompt(userPrompt) {
     `---`,
     `Output requirements (these apply to your response only, not to the design):`,
     `- Return a single complete HTML document, nothing else. No markdown fences, no commentary before or after.`,
-    `- All CSS inline in one <style> tag. No external requests of any kind: no CDN links, no web fonts, no remote images, no scripts. Use only system-available font families.`,
-    `- The page renders at exactly 1440x900 (desktop browser viewport). The body must be exactly that size with no scrolling and no margin.`,
-    `- This is a web application, NOT a mobile app. Use desktop layout patterns: navigation bar or sidebar, wider content areas, hover states visible on buttons, larger typography. Do NOT include mobile status bars or home indicators.`,
+    `- All CSS inline in one <style> tag. No external requests of any kind: no CDN links, no web fonts, no remote images, no scripts. Use only system-available font families as specified in the Typography section above.`,
+    `- The page renders at exactly 1440x900 (desktop browser viewport). The body must be exactly that size with no scrolling and no margin. This is a WEB/DESKTOP APP — use desktop layout patterns: navigation bar or sidebar, wider content areas, hover states visible on buttons, larger typography.`,
+    `- Do NOT include mobile status bars or home indicators. This is NOT a mobile app.`,
     `- Draw icons as inline SVG, styled to match the design above (stroke weight, fill and shape are part of the style — do not default to thin outlines). Represent photos/illustrations as placeholder blocks with correct proportions, tinted to fit the palette — never <img> tags.`,
     `- Use realistic placeholder content — real-sounding names, prices and copy. Never lorem ipsum, never "Label 1".`,
     `- This is a static screenshot: render one polished default state. No JavaScript.`,
@@ -763,6 +999,7 @@ export function buildCatalog({ categories = CATEGORIES, styles = STYLES } = {}) 
             styleTags: [...style.tags, palette.name],
             palette: palette.id,
             prompt: userPrompt,
+            ...(style.fontFamily ? { fontFamily: style.fontFamily } : {}),
             renderPrompt: isWeb ? buildWebRenderPrompt(userPrompt) : buildRenderPrompt(userPrompt),
           });
         }
@@ -803,6 +1040,7 @@ export function buildPacks({ styles = STYLES } = {}) {
           styleTags: [...style.tags, palette.name],
           palette: palette.id,
           prompt: userPrompt,
+          ...(style.fontFamily ? { fontFamily: style.fontFamily } : {}),
           renderPrompt: isWeb ? buildWebRenderPrompt(userPrompt) : buildRenderPrompt(userPrompt),
         };
       });
