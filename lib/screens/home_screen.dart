@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../data/design_repository.dart';
 import '../models/ui_design.dart';
+import '../services/analytics_service.dart';
 import '../services/design_downloader.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/design_preview.dart';
+import 'customer_center_screen.dart';
 import 'detail_screen.dart';
+import 'generate_prompt_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _visibleCount = _pageSize;
   bool _isLoadingMore = false;
   final _scrollController = ScrollController();
+
+  String _lastTrackedSearch = '';
+  DateTime? _lastSearchTime;
 
   @override
   void initState() {
@@ -88,6 +94,25 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _searchFocusNode.requestFocus();
     });
+  }
+
+  // Free users get a few generations a day, so the screen opens for everyone;
+  // the paywall appears only once someone actually runs out.
+  void _openPromptGenerator() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const GeneratePromptScreen()),
+    );
+  }
+
+  void _trackSearchDebounced(String query) {
+    final now = DateTime.now();
+    final trimmed = query.trim().toLowerCase();
+    if (trimmed.length < 2) return;
+    if (trimmed == _lastTrackedSearch) return;
+    if (_lastSearchTime != null && now.difference(_lastSearchTime!).inSeconds < 3) return;
+    _lastTrackedSearch = trimmed;
+    _lastSearchTime = now;
+    AnalyticsService.instance.trackSearch(query: trimmed);
   }
 
   bool get _hasActiveFilter =>
@@ -405,6 +430,43 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const Spacer(),
                           GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const CustomerCenterScreen()),
+                            ),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceSubtle,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.person_outline_rounded,
+                                size: 20,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: _openPromptGenerator,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceSubtle,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome_outlined,
+                                size: 20,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
                             onTap: _openSearch,
                             child: Container(
                               width: 36,
@@ -448,10 +510,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: TextField(
                               controller: _searchController,
                               focusNode: _searchFocusNode,
-                              onChanged: (v) => setState(() {
-                                    _query = v;
-                                    _visibleCount = _pageSize;
-                                  }),
+                              onChanged: (v) {
+                                    setState(() {
+                                      _query = v;
+                                      _visibleCount = _pageSize;
+                                    });
+                                    _trackSearchDebounced(v);
+                                  },
                               onSubmitted: (_) => _searchFocusNode.unfocus(),
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppColors.textPrimary,
@@ -799,6 +864,10 @@ class _DownloadButton extends StatelessWidget {
             onTap: () async {
               try {
                 await DesignDownloader.download(design);
+                AnalyticsService.instance.trackDownload(
+                  designId: design.id,
+                  category: design.category,
+                );
               } on DesignDownloadException catch (error) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(

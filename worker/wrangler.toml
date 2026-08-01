@@ -7,7 +7,17 @@ compatibility_date = "2024-01-01"
 binding = "mastui_catalog"
 bucket_name = "mastui-catalog"
 
+# Workers AI binding — powers /generate-prompt. No API key or secret needed;
+# usage draws on the account's daily free Neuron allocation.
+[ai]
+binding = "AI"
+
 # Environment variables
 [vars]
 CORS_ORIGIN = "*"
 # ADMIN_SECRET = "set via: wrangler secret put ADMIN_SECRET"
+
+# Verifies Pro entitlements server-side so the higher generation cap cannot be
+# unlocked by spoofing a client header. Without it every device gets the free
+# cap. RevenueCat dashboard → API keys → Secret key (starts with `sk_`).
+# REVENUECAT_SECRET_KEY = "set via: wrangler secret put REVENUECAT_SECRET_KEY"

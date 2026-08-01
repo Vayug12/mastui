@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MastUI</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+
+<!-- ── Browse ─────────────────────────────────────────────────────────── -->
+<section id="browse-view">
+  <header>
+    <strong>MastUI</strong>
+    <button id="capture" class="ghost" title="Screenshot this tab and turn it into a prompt">
+      Capture tab
+    </button>
+  </header>
+
+  <input type="search" id="q" placeholder="Search designs…" autocomplete="off">
+  <div class="chips" id="chips"></div>
+
+  <div class="grid" id="results"></div>
+  <p class="status" id="status">Loading designs…</p>
+  <a id="site-link" class="site-link" target="_blank" rel="noopener">Browse the full library →</a>
+  <button id="more" class="secondary" hidden>Show more</button>
+</section>
+
+<!-- ── One design ─────────────────────────────────────────────────────── -->
+<section id="detail-view" hidden>
+  <header>
+    <button id="back" class="ghost">← Back</button>
+  </header>
+
+  <img id="detail-image" alt="">
+  <h1 id="detail-title"></h1>
+  <p class="muted" id="detail-meta"></p>
+
+  <pre id="detail-prompt"></pre>
+
+  <div class="actions">
+    <button id="insert" class="primary">Insert into page</button>
+    <button id="copy" class="secondary">Copy</button>
+  </div>
+  <p class="status" id="detail-status"></p>
+</section>
+
+<!-- ── Screenshot → prompt ────────────────────────────────────────────── -->
+<section id="capture-view" hidden>
+  <header>
+    <button id="capture-back" class="ghost">← Back</button>
+  </header>
+
+  <h1>Screenshot to prompt</h1>
+  <p class="muted">Capture this tab, or paste an image with Ctrl+V.</p>
+
+  <img id="capture-image" alt="" hidden>
+
+  <div class="chips" id="platform-chips">
+    <button class="chip is-active" data-platform="web">Web app</button>
+    <button class="chip" data-platform="mobile">Mobile app</button>
+  </div>
+
+  <div class="actions">
+    <button id="capture-again" class="secondary">Capture tab</button>
+    <button id="generate" class="primary" disabled>Generate prompt</button>
+  </div>
+
+  <pre id="capture-prompt" hidden></pre>
+  <div class="actions" id="capture-actions" hidden>
+    <button id="capture-insert" class="primary">Insert into page</button>
+    <button id="capture-copy" class="secondary">Copy</button>
+  </div>
+
+  <p class="status" id="capture-status"></p>
+</section>
+
+<script src="sidepanel.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "mastui-web",
+  "private": true,
+  "type": "module",
+  "description": "Static site + Chrome extension build for MastUI.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "build:local": "node build.js --local",
+    "pack": "node pack-extension.js",
+    "preview": "npx --yes serve dist"
+  }
+}

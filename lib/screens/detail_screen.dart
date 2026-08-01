@@ -29,6 +29,9 @@ class DetailScreen extends StatefulWidget {
 class _DetailScreenState extends State<DetailScreen> {
   late final PageController _controller;
   late int _index;
+  late DateTime _screenOpenedAt;
+  String _lastDwellId = '';
+  String _lastDwellCategory = '';
 
   UiDesign get _current => widget.screens[_index];
 
@@ -37,6 +40,9 @@ class _DetailScreenState extends State<DetailScreen> {
     super.initState();
     _index = widget.initialIndex;
     _controller = PageController(initialPage: _index);
+    _screenOpenedAt = DateTime.now();
+    _lastDwellId = _current.id;
+    _lastDwellCategory = _current.category;
     // Track view event (best-effort, fire-and-forget)
     AnalyticsService.instance.trackView(
       designId: _current.id,
@@ -44,8 +50,20 @@ class _DetailScreenState extends State<DetailScreen> {
     );
   }
 
+  void _sendDwell() {
+    final seconds = DateTime.now().difference(_screenOpenedAt).inSeconds;
+    if (_lastDwellId.isNotEmpty) {
+      AnalyticsService.instance.trackDwell(
+        designId: _lastDwellId,
+        category: _lastDwellCategory,
+        seconds: seconds,
+      );
+    }
+  }
+
   @override
   void dispose() {
+    _sendDwell();
     _controller.dispose();
     super.dispose();
   }
@@ -103,6 +121,10 @@ class _DetailScreenState extends State<DetailScreen> {
   Future<void> _downloadImage() async {
     try {
       await DesignDownloader.download(_current);
+      AnalyticsService.instance.trackDownload(
+        designId: _current.id,
+        category: _current.category,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image saved to Downloads/MastUI')),
@@ -150,7 +172,11 @@ class _DetailScreenState extends State<DetailScreen> {
               controller: _controller,
               itemCount: screens.length,
               onPageChanged: (index) {
+                _sendDwell();
                 setState(() => _index = index);
+                _screenOpenedAt = DateTime.now();
+                _lastDwellId = widget.screens[index].id;
+                _lastDwellCategory = widget.screens[index].category;
                 AnalyticsService.instance.trackView(
                   designId: widget.screens[index].id,
                   category: widget.screens[index].category,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'screens/home_screen.dart';
 import 'services/ad_service.dart';
+import 'services/revenue_cat_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -12,6 +13,9 @@ Future<void> main() async {
 
   // Start the ads SDK without blocking first frame.
   unawaited(AdService.instance.init());
+
+  // Initialize RevenueCat SDK.
+  unawaited(RevenueCatService.instance.init());
 
   // Let the white Flutter canvas extend behind Android's 3-button/gesture area.
   // Android 10+ otherwise adds a dark contrast scrim behind transparent nav bars.

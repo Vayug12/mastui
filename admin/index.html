@@ -243,6 +243,9 @@
         <div class="stat-card"><div class="label">Total Views</div><div class="value" id="totalViews">—</div></div>
         <div class="stat-card"><div class="label">Total Copies</div><div class="value" id="totalCopies">—</div></div>
         <div class="stat-card"><div class="label">Copy Rate</div><div class="value" id="totalRate">—</div></div>
+        <div class="stat-card"><div class="label">Downloads</div><div class="value" id="totalDownloads">—</div></div>
+        <div class="stat-card"><div class="label">Avg Dwell</div><div class="value" id="avgDwell">—</div></div>
+        <div class="stat-card"><div class="label">Searches</div><div class="value" id="totalSearches">—</div></div>
         <div class="stat-card"><div class="label">Feedback</div><div class="value" id="totalFeedback">—</div></div>
       </div>
       <h2 style="margin-bottom:10px;">By Category</h2>
@@ -250,11 +253,22 @@
       <h2 style="margin-top:16px;margin-bottom:10px;">Per Design</h2>
       <div style="overflow-x:auto;">
         <table class="analytics-table" id="designStats">
-          <thead><tr><th>Design</th><th>Category</th><th>Views</th><th>Copies</th><th>Copy Rate</th></tr></thead>
+          <thead><tr><th>Design</th><th>Category</th><th>Views</th><th>Copies</th><th>Copy Rate</th><th>Downloads</th><th>Avg Dwell</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
       <div id="analyticsEmpty" class="catalog-empty" style="display:none;">No analytics data yet. Events will appear once users interact with designs.</div>
+    </section>
+
+    <!-- ── Top Searches ── -->
+    <section class="card">
+      <div class="catalog-header">
+        <h2>Top Searches</h2>
+        <button type="button" class="btn btn-secondary" id="refreshSearches">Refresh</button>
+      </div>
+      <div id="searchStats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">
+        <div class="catalog-empty" style="grid-column:1/-1;">No search data yet.</div>
+      </div>
     </section>
 
     <!-- ── User Feedback ── -->
@@ -642,14 +656,24 @@
 
         const designs = data.designs || {};
         const byCategory = data.byCategory || {};
+        const topSearches = data.topSearches || [];
         const entries = Object.entries(designs);
 
         // Summary
-        let totalViews = 0, totalCopies = 0;
-        for (const [, d] of entries) { totalViews += d.views; totalCopies += d.copies; }
+        let totalViews = 0, totalCopies = 0, totalDownloads = 0, totalDwell = 0, dwellCount = 0;
+        for (const [, d] of entries) {
+          totalViews += d.views;
+          totalCopies += d.copies;
+          totalDownloads += d.downloads || 0;
+          totalDwell += d.totalDwell || 0;
+          dwellCount += d.dwellCount || 0;
+        }
         $('#totalViews').textContent = totalViews.toLocaleString();
         $('#totalCopies').textContent = totalCopies.toLocaleString();
         $('#totalRate').textContent = totalViews ? Math.round((totalCopies / totalViews) * 100) + '%' : '—';
+        $('#totalDownloads').textContent = totalDownloads.toLocaleString();
+        $('#avgDwell').textContent = dwellCount > 0 ? Math.round(totalDwell / dwellCount) + 's' : '—';
+        $('#totalSearches').textContent = topSearches.reduce((sum, s) => sum + s.count, 0).toLocaleString();
 
         // Feedback count
         try {
@@ -671,11 +695,14 @@
         } else {
           catGrid.innerHTML = catEntries.map(([cat, d]) => {
             const rate = d.views ? Math.round((d.copies / d.views) * 100) : 0;
+            const avgDwell = d.dwellCount > 0 ? Math.round(d.totalDwell / d.dwellCount) : 0;
             return `<div class="category-card">
               <div class="name">${cat}</div>
               <div class="stat-line">Views: <strong>${d.views}</strong></div>
               <div class="stat-line">Copies: <strong>${d.copies}</strong></div>
               <div class="stat-line">Copy Rate: <strong class="rate ${rateClass(rate)}">${rate}%</strong></div>
+              <div class="stat-line">Downloads: <strong>${d.downloads || 0}</strong></div>
+              <div class="stat-line">Avg Dwell: <strong>${avgDwell}s</strong></div>
             </div>`;
           }).join('');
         }
@@ -691,14 +718,30 @@
           $('#analyticsEmpty').style.display = 'none';
           tbody.innerHTML = sorted.map(([id, d]) => {
             const rate = d.views ? Math.round((d.copies / d.views) * 100) : 0;
+            const avgDwell = d.dwellCount > 0 ? Math.round(d.totalDwell / d.dwellCount) : 0;
             return `<tr>
               <td>${id}</td>
               <td>${d.category || '—'}</td>
               <td>${d.views}</td>
               <td>${d.copies}</td>
               <td><span class="rate ${rateClass(rate)}">${rate}%</span></td>
+              <td>${d.downloads || 0}</td>
+              <td>${avgDwell}s</td>
             </tr>`;
           }).join('');
+        }
+
+        // Top searches
+        const searchGrid = $('#searchStats');
+        if (topSearches.length === 0) {
+          searchGrid.innerHTML = '<div class="catalog-empty" style="grid-column:1/-1;">No search data yet.</div>';
+        } else {
+          searchGrid.innerHTML = topSearches.map(s =>
+            `<div style="padding:8px 12px;border:1px solid #e5e5e5;border-radius:8px;background:#fafafa;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+              <span style="color:#333;font-weight:500;">${escapeHtml(s.query)}</span>
+              <span style="color:#888;font-size:12px;">${s.count}</span>
+            </div>`
+          ).join('');
         }
       } catch (err) {
         console.error('Analytics load failed:', err);
@@ -748,6 +791,7 @@
 
     refreshAnalytics.addEventListener('click', loadAnalytics);
     refreshFeedback.addEventListener('click', loadFeedback);
+    $('#refreshSearches').addEventListener('click', loadAnalytics);
 
     // Load analytics + feedback on connect
     const origCheckConnection = checkConnection;

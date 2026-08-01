@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "MastUI — UI prompts for AI coding tools",
+  "version": "1.0.0",
+  "description": "Browse 1,000+ UI design prompts and paste one straight into Lovable, v0, Bolt, Cursor or Claude. Free, no sign-up.",
+  "icons": {
+    "128": "icon128.png"
+  },
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "storage",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "https://mastui-api.sanjeev-yadav1201.workers.dev/*",
+    "https://lovable.dev/*",
+    "https://v0.app/*",
+    "https://bolt.new/*",
+    "https://claude.ai/*",
+    "https://chatgpt.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open MastUI"
+  }
+}

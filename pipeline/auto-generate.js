@@ -88,31 +88,39 @@ async function screenshotHtml(browser, html, { platform = 'mobile' } = {}) {
   }
 }
 
-/** Upload one design to Worker API. */
-async function uploadToWorker(item, pngBuffer, packMeta) {
+/** Upload one design to Worker API with retry. */
+async function uploadToWorker(item, pngBuffer, packMeta, { retries = 3, delay = 2000 } = {}) {
   if (!ADMIN_SECRET) throw new Error('ADMIN_SECRET env not set');
 
-  const blob = new Blob([pngBuffer], { type: 'image/png' });
-  const formData = new FormData();
-  formData.append('image', blob, `${item.id}.png`);
-  formData.append('metadata', JSON.stringify({
-    id: item.id,
-    title: item.title,
-    category: item.category,
-    platforms: item.platforms ?? ['mobile'],
-    styleTags: item.styleTags ?? [],
-    prompt: item.prompt,
-    ...packMeta,
-  }));
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const blob = new Blob([pngBuffer], { type: 'image/png' });
+    const formData = new FormData();
+    formData.append('image', blob, `${item.id}.png`);
+    formData.append('metadata', JSON.stringify({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      platforms: item.platforms ?? ['mobile'],
+      styleTags: item.styleTags ?? [],
+      prompt: item.prompt,
+      ...packMeta,
+    }));
 
-  const res = await fetch(`${API_URL}/admin/upload`, {
-    method: 'POST',
-    headers: { 'X-Admin-Secret': ADMIN_SECRET },
-    body: formData,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-  return data;
+    try {
+      const res = await fetch(`${API_URL}/admin/upload`, {
+        method: 'POST',
+        headers: { 'X-Admin-Secret': ADMIN_SECRET },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      console.log(`    attempt ${attempt} failed: ${err.message} — retrying in ${delay / 1000}s...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
 }
 
 /** Generate one random missing single screen. */

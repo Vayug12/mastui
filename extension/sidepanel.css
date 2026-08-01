@@ -1,0 +1,173 @@
+/* Side panel — same design language as the site, tuned for a ~360px column. */
+
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f8;
+  --border: #ececec;
+  --text: #111111;
+  --text-secondary: #666666;
+  --text-muted: #8a8a8a;
+  --accent: #10a37f;
+  --accent-hover: #0d8c6b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1114;
+    --bg-subtle: #16181c;
+    --border: #24272c;
+    --text: #ececec;
+    --text-secondary: #a0a4ab;
+    --text-muted: #767b83;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+header strong { font-size: 16px; letter-spacing: -0.3px; }
+header .ghost { margin-left: auto; }
+
+h1 { font-size: 17px; margin: 12px 0 4px; font-weight: 600; }
+.muted { color: var(--text-muted); font-size: 12px; margin: 0 0 12px; }
+
+input[type='search'] {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: var(--bg-subtle);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+}
+input[type='search']:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  padding: 5px 12px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.card {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+  cursor: pointer;
+}
+.card img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+.card span {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 20px 8px 7px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+button {
+  font: inherit;
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  transition: background 200ms ease-in-out;
+}
+button:disabled { opacity: 0.45; cursor: default; }
+
+.primary { background: var(--accent); color: #fff; font-weight: 600; flex: 1; }
+.primary:not(:disabled):hover { background: var(--accent-hover); }
+
+.secondary { background: var(--bg-subtle); color: var(--text); border-color: var(--border); }
+.secondary:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+
+.ghost {
+  background: none;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  font-size: 12px;
+  border-color: var(--border);
+}
+.ghost:hover { color: var(--accent); border-color: var(--accent); }
+
+#more { width: 100%; margin-top: 10px; }
+
+.site-link {
+  display: block;
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.actions { display: flex; gap: 8px; margin: 12px 0; }
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 12px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+#detail-image, #capture-image {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: block;
+}
+
+.status { color: var(--text-muted); font-size: 12px; margin: 10px 0 0; min-height: 18px; }
+.status.error { color: #e5484d; }
