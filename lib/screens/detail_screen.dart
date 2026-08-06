@@ -5,6 +5,7 @@ import '../models/ui_design.dart';
 import '../services/analytics_service.dart';
 import '../services/design_downloader.dart';
 import '../theme/app_colors.dart';
+import '../widgets/ad_banner.dart';
 import '../widgets/design_preview.dart';
 import '../widgets/feedback_sheet.dart';
 import 'fullscreen_viewer_screen.dart';
@@ -163,83 +164,103 @@ class _DetailScreenState extends State<DetailScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      body: Column(
         children: [
-          SizedBox(
-            height: previewHeight,
-            child: PageView.builder(
-              controller: _controller,
-              itemCount: screens.length,
-              onPageChanged: (index) {
-                _sendDwell();
-                setState(() => _index = index);
-                _screenOpenedAt = DateTime.now();
-                _lastDwellId = widget.screens[index].id;
-                _lastDwellCategory = widget.screens[index].category;
-                AnalyticsService.instance.trackView(
-                  designId: widget.screens[index].id,
-                  category: widget.screens[index].category,
-                );
-              },
-              itemBuilder: (context, index) {
-                final isWeb = screens[index].platforms.contains('web');
-                return Center(
-                  child: AspectRatio(
-                    aspectRatio: isWeb ? 16 / 9 : 390 / 844,
-                    child: GestureDetector(
-                      onTap: _openFullscreen,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceSubtle,
-                          borderRadius: BorderRadius.circular(AppRadius.card),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            DesignPreview(
-                              design: screens[index],
-                              alignment: Alignment.center,
-                              fit: isWeb ? BoxFit.cover : BoxFit.contain,
+          // Pinned above the scroll view rather than sitting in it: the
+          // banner wants the full width, and the list is inset by 20. Its
+          // own bottom SafeArea would only open a stray gap up here.
+          MediaQuery.removePadding(
+            context: context,
+            removeBottom: true,
+            child: const AdBanner(),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                SizedBox(
+                  height: previewHeight,
+                  child: PageView.builder(
+                    controller: _controller,
+                    itemCount: screens.length,
+                    onPageChanged: (index) {
+                      _sendDwell();
+                      setState(() => _index = index);
+                      _screenOpenedAt = DateTime.now();
+                      _lastDwellId = widget.screens[index].id;
+                      _lastDwellCategory = widget.screens[index].category;
+                      AnalyticsService.instance.trackView(
+                        designId: widget.screens[index].id,
+                        category: widget.screens[index].category,
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      final isWeb = screens[index].platforms.contains('web');
+                      return Center(
+                        child: AspectRatio(
+                          aspectRatio: isWeb ? 16 / 9 : 390 / 844,
+                          child: GestureDetector(
+                            onTap: _openFullscreen,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceSubtle,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.card),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  DesignPreview(
+                                    design: screens[index],
+                                    alignment: Alignment.center,
+                                    fit: isWeb
+                                        ? BoxFit.cover
+                                        : BoxFit.contain,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+                if (isPack) ...[
+                  const SizedBox(height: 12),
+                  _Dots(count: screens.length, active: _index),
+                ],
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _Tag(label: _current.category, emphasized: true),
+                    for (final platform in _current.platforms)
+                      _Tag(label: platform == 'web' ? 'Web app' : 'Mobile app'),
+                    for (final tag in _current.styleTags) _Tag(label: tag),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text('Prompt', style: textTheme.titleLarge),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: SelectableText(
+                    _current.prompt,
+                    style: textTheme.bodyMedium,
+                  ),
+                ),
+              ],
             ),
-          ),
-          if (isPack) ...[
-            const SizedBox(height: 12),
-            _Dots(count: screens.length, active: _index),
-          ],
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _Tag(label: _current.category, emphasized: true),
-              for (final platform in _current.platforms)
-                _Tag(label: platform == 'web' ? 'Web app' : 'Mobile app'),
-              for (final tag in _current.styleTags) _Tag(label: tag),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text('Prompt', style: textTheme.titleLarge),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.card),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: SelectableText(_current.prompt, style: textTheme.bodyMedium),
           ),
         ],
       ),

@@ -5,11 +5,8 @@ import '../models/ui_design.dart';
 import '../services/analytics_service.dart';
 import '../services/design_downloader.dart';
 import '../theme/app_colors.dart';
-import '../widgets/ad_banner.dart';
 import '../widgets/design_preview.dart';
-import 'customer_center_screen.dart';
 import 'detail_screen.dart';
-import 'generate_prompt_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -94,14 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _searchFocusNode.requestFocus();
     });
-  }
-
-  // Free users get a few generations a day, so the screen opens for everyone;
-  // the paywall appears only once someone actually runs out.
-  void _openPromptGenerator() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const GeneratePromptScreen()),
-    );
   }
 
   void _trackSearchDebounced(String query) {
@@ -348,7 +337,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const AdBanner(),
       body: SafeArea(
         child: FutureBuilder<List<UiDesign>>(
           future: _designs,
@@ -429,43 +417,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                           ),
                           const Spacer(),
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const CustomerCenterScreen()),
-                            ),
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceSubtle,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.person_outline_rounded,
-                                size: 20,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          GestureDetector(
-                            onTap: _openPromptGenerator,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceSubtle,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.auto_awesome_outlined,
-                                size: 20,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
                           GestureDetector(
                             onTap: _openSearch,
                             child: Container(

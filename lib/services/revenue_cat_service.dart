@@ -76,8 +76,11 @@ class RevenueCatService {
     try {
       await _ready();
       return await Purchases.getOfferings();
-    } on PlatformException catch (e) {
-      debugPrint('RevenueCat: Failed to fetch offerings – ${e.message}');
+    } catch (e) {
+      // Not just PlatformException: where the plugin is absent altogether
+      // (widget tests, unsupported platforms) the channel throws
+      // MissingPluginException, and an offerings failure must never be fatal.
+      debugPrint('RevenueCat: Failed to fetch offerings – $e');
       return null;
     }
   }
@@ -151,12 +154,14 @@ class RevenueCatService {
     }
   }
 
+  /// Never throws — the Generate tab checks this while it is being built, so a
+  /// failure here has to degrade to "free", not take the frame down with it.
   Future<bool> isPro() async {
     try {
       final customerInfo = await getCustomerInfo();
       return customerInfo.entitlements.active.containsKey(proEntitlementId);
-    } on PlatformException catch (e) {
-      debugPrint('RevenueCat: Entitlement check failed – ${e.message}');
+    } catch (e) {
+      debugPrint('RevenueCat: Entitlement check failed – $e');
       return false;
     }
   }

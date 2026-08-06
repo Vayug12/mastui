@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/main_shell.dart';
 import 'services/ad_service.dart';
 import 'services/revenue_cat_service.dart';
 import 'theme/app_theme.dart';
@@ -42,7 +42,7 @@ class MastUiApp extends StatelessWidget {
       title: 'MastUI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const HomeScreen(),
+      home: const MainShell(),
     );
   }
 }

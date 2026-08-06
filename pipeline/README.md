@@ -71,14 +71,10 @@ Nothing reaches the app until you sync. The full loop:
 ```sh
 node shoot.js        # design.html -> image.png
 node catalog.js      # metadata.json + catalog.json, and the palette check
-node sync-to-app.js  # copy into ../assets/, which the app reads
 cd .. && flutter run
 ```
 
-`sync-to-app.js` bundles the screens into the APK — good for local preview and as an
-offline starter set, but adding screens this way needs a Play Store update. Once the
-Cloudflare Worker + R2 are live, new screens arrive over the air and the bundle stops
-being the only source.
+All designs are served live from the Cloudflare Worker API — no local bundling needed.
 
 ## Authoring screens without an API key
 

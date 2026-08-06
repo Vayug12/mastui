@@ -296,15 +296,7 @@ async function main() {
     await browser.close();
   }
 
-  if (generated > 0) {
-    console.log('\n  syncing to app...');
-    const { execSync } = await import('node:child_process');
-    try {
-      execSync('node sync-to-app.js', { cwd: import.meta.dirname, stdio: 'inherit' });
-    } catch (err) {
-      console.error('  sync failed:', err.message);
-    }
-  }
+
 }
 
 await main();

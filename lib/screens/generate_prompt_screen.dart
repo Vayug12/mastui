@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/prompt_generator_service.dart';
 import '../services/revenue_cat_service.dart';
 import '../theme/app_colors.dart';
+import 'customer_center_screen.dart';
 import 'paywall_screen.dart';
 
 /// Upload any UI screenshot and get back a prompt that recreates it.
@@ -110,6 +111,16 @@ class _GeneratePromptScreenState extends State<GeneratePromptScreen> {
     await _generate();
   }
 
+  /// Opened from the plan card — plans, restore, cancel and support all live
+  /// behind it, so the entitlement can have changed by the time we come back.
+  Future<void> _openSubscription() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CustomerCenterScreen()),
+    );
+    if (!mounted) return;
+    await _checkEntitlement();
+  }
+
   Future<void> _copyPrompt() async {
     final result = _result;
     if (result == null) return;
@@ -123,21 +134,6 @@ class _GeneratePromptScreenState extends State<GeneratePromptScreen> {
           content: Text('Prompt copied — paste it into your AI tool'),
         ),
       );
-  }
-
-  String _footerNote() {
-    if (_isPro) {
-      return 'Tip: AI works best when you share this prompt + screenshot';
-    }
-
-    final remaining = _remaining;
-    if (remaining == null) {
-      return '$_freeDailyLimit free prompts a day';
-    }
-    if (remaining == 0) {
-      return 'Out of free prompts — resets at midnight';
-    }
-    return '$remaining of $_freeDailyLimit free prompts left today';
   }
 
   void _reset() {
@@ -156,40 +152,29 @@ class _GeneratePromptScreenState extends State<GeneratePromptScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Row(
-          children: [
-            const Text('Screenshot to prompt'),
-            if (_isPro) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'PRO',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+        title: const Text('Screenshot to prompt'),
+        actions: [
+          IconButton(
+            onPressed: _openSubscription,
+            icon: const Icon(Icons.person_outline_rounded, size: 22),
+            tooltip: 'Subscription',
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         children: [
           Text(
-            'Upload any app screenshot and get a prompt that rebuilds it.',
+            'Upload any UI image and get a prompt that rebuilds it.',
             style: textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 20),
+          _PlanCard(
+            isPro: _isPro,
+            remaining: _remaining,
+            onUpgrade: _offerUpgrade,
+            onManage: _openSubscription,
           ),
           const SizedBox(height: 20),
           if (image == null)
@@ -220,17 +205,7 @@ class _GeneratePromptScreenState extends State<GeneratePromptScreen> {
           ],
           if (result != null) ...[
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Text('Prompt', style: textTheme.titleLarge),
-                const Spacer(),
-                if (!result.isPro)
-                  Text(
-                    '${result.remaining} left today',
-                    style: textTheme.bodySmall,
-                  ),
-              ],
-            ),
+            Text('Prompt', style: textTheme.titleLarge),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -251,8 +226,10 @@ class _GeneratePromptScreenState extends State<GeneratePromptScreen> {
           ],
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      // The app's own tab bar sits below this Scaffold, so the CTA only needs
+      // plain padding — a SafeArea here would inset twice.
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -279,16 +256,80 @@ class _GeneratePromptScreenState extends State<GeneratePromptScreen> {
                 icon: const Icon(Icons.copy_outlined, size: 20),
                 label: const Text('Copy prompt'),
               ),
-            const SizedBox(height: 8),
-            Text(
-              _footerNote(),
-              textAlign: TextAlign.center,
-              style: textTheme.bodySmall,
-            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Plan status and the way into everything paid — plans, restore, cancel.
+/// It lives on this tab because the daily cap is the only thing the
+/// subscription changes.
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({
+    required this.isPro,
+    required this.remaining,
+    required this.onUpgrade,
+    required this.onManage,
+  });
+
+  final bool isPro;
+  final int? remaining;
+  final VoidCallback onUpgrade;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isPro ? Colors.white : AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPro ? 'Mast UI Pro' : 'Free plan',
+                  style: textTheme.titleMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(_status(), style: textTheme.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          TextButton(
+            onPressed: isPro ? onManage : onUpgrade,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              minimumSize: const Size(44, 44),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: Text(isPro ? 'Manage' : 'Upgrade'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _status() {
+    if (isPro) return '50 prompts a day · no ads';
+
+    final remaining = this.remaining;
+    if (remaining == null) return '$_freeDailyLimit prompts a day';
+    if (remaining == 0) return 'Out of prompts — resets at midnight';
+    return '$remaining of $_freeDailyLimit prompts left today';
   }
 }
 
@@ -318,13 +359,8 @@ class _UploadTarget extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Choose a screenshot',
+              'Choose a UI image',
               style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'PNG, JPEG/JPG or WebP',
-              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
