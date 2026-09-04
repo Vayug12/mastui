@@ -25,6 +25,23 @@ The UI should prioritize whitespace, typography, hierarchy, and subtle animation
 4. Avoid visual clutter.
 5. Use smooth motion, never distracting animations.
 6. Everything should feel premium.
+7. No helper text. No redundant descriptions.
+8. Minimal text per screen. Say more with less.
+9. No fancy multiple icons. One icon, one clear meaning.
+
+---
+
+# Text Minimalism
+
+Every screen should have minimum text.
+
+No helper text under inputs or labels.
+
+No duplicate text saying the same thing.
+
+One heading. One description max. Then content.
+
+If text can be removed without losing meaning, remove it.
 
 ---
 
@@ -276,6 +293,8 @@ Stroke width
 
 Never mix icon styles.
 
+One icon per action. No decorative multiple icons.
+
 ---
 
 # Lists
@@ -330,13 +349,13 @@ No decorative frames.
 
 Every empty state should include:
 
-simple illustration or icon
+simple icon
 
 clear title
 
-one sentence
+one action
 
-primary action
+No long explanations.
 
 ---
 
@@ -350,9 +369,11 @@ Avoid full-screen spinners.
 
 # Error States
 
-Explain the problem simply.
+Short error message.
 
-Offer one clear action.
+One clear action.
+
+No long explanations.
 
 ---
 
@@ -380,21 +401,15 @@ Page Title
 
 ↓
 
-Optional Description
-
-↓
-
 Primary Content
-
-↓
-
-Secondary Content
 
 ↓
 
 Primary CTA
 
 Use generous whitespace between sections.
+
+No optional descriptions. Minimal text only.
 
 ---
 
@@ -442,6 +457,14 @@ Use generous whitespace between sections.
 
 ✗ Crowded layouts
 
+✗ Helper text under inputs
+
+✗ Multiple icons saying same thing
+
+✗ Redundant text descriptions
+
+✗ More than 2-3 lines of text per screen
+
 ---
 
 # AI Instructions
@@ -456,4 +479,7 @@ Whenever creating a new screen:
 - Optimize for readability first.
 - Every screen should look like it belongs in the same product.
 - If unsure, choose the simpler option.
+- No helper text under any input or label.
+- Use minimum text. Say more with less.
+- One icon per element. No fancy multiple icons.
 - The result should resemble a premium Apple-quality productivity app with the calm visual language of ChatGPT.

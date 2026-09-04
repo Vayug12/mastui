@@ -118,18 +118,22 @@ abstract final class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceSubtle,
+        fillColor: AppColors.inputBackground,
         hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 15),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 14,
+          horizontal: 16,
+          vertical: 16,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.searchBar),
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.searchBar),
+          borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),

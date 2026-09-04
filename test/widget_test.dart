@@ -1,59 +1,127 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:mastui/main.dart';
-import 'package:mastui/screens/detail_screen.dart';
+import 'package:mastui/models/lead_model.dart';
+import 'package:mastui/screens/home_screen.dart';
+import 'package:mastui/widgets/lead_card.dart';
 
 void main() {
-  testWidgets('home lists style packs and opens the unified detail screen',
+  testWidgets('GetLead app mounts and displays search controls cleanly',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MastUiApp());
+    await tester.pumpAndSettle();
 
-    // catalog.json is loaded with real async I/O (rootBundle), which never
-    // completes inside the test's fake-async zone — runAsync lets it finish.
-    for (var i = 0;
-        i < 50 && find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
-        i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
-      await tester.pump();
-    }
+    // Verify main screen elements
+    expect(find.byType(MastUiApp), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('GetLead'), findsOneWidget);
+    expect(find.text('Generate Leads'), findsOneWidget);
 
-    expect(find.text('MastUI'), findsOneWidget);
+    // Verify more_vert menu in top AppBar
+    expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
 
-    // Match on the card key rather than a title — titles change every time the
-    // pipeline syncs a new catalog.
-    final packCards = find.byWidgetPredicate(
-      (w) => w.key is ValueKey<String> &&
-          (w.key as ValueKey<String>).value.startsWith('pack-card-'),
+    // Verify adjacent filter button at bottom
+    expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+
+    // Tap filter button to open bottom sheet
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pumpAndSettle();
+
+    // Verify filter bottom sheet content
+    expect(find.text('Filters'), findsOneWidget);
+    expect(find.text('Location'), findsOneWidget);
+    expect(find.text('Platform'), findsOneWidget);
+    expect(find.text('Apply Filters'), findsOneWidget);
+
+    // Close bottom sheet
+    await tester.tap(find.text('Apply Filters'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filters'), findsNothing);
+  });
+
+  testWidgets('LeadCard renders without overflow on narrow width and respects clean UI',
+      (WidgetTester tester) async {
+    final lead = Lead(
+      id: 'test-1',
+      name: 'SDC Business Solutions',
+      businessName: 'Digital Marketing Agency',
+      email: 'contact@sdcbusiness.com',
+      phone: '+919876543210',
+      website: 'https://sdcbusiness.com',
+      platform: 'Instagram',
+      profileUrl: 'https://instagram.com/sdcbusiness',
+      niche: 'Digital Marketing',
+      bioSnippet: 'Premier Digital Marketing agency helping brands grow.',
+      extractedAt: DateTime.now(),
     );
-    expect(packCards, findsWidgets,
-        reason: 'bundled catalog should contain at least one style pack');
 
-    await tester.tap(packCards.first);
+    // Simulate narrow mobile screen (320px width)
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              child: LeadCard(
+                lead: lead,
+                onDelete: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    // Packs open the same DetailScreen as single designs, with the pack's
-    // screens in a swipeable carousel.
-    expect(find.byType(DetailScreen), findsOneWidget);
-    expect(find.byType(PageView), findsOneWidget);
+    // Clickable platform badge is present
+    expect(find.text('Instagram'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_outward_rounded), findsOneWidget);
 
-    // Actions live in the pinned bottom bar — visible without scrolling.
-    expect(find.text('Download'), findsOneWidget);
-    expect(find.text('Copy prompt'), findsOneWidget);
+    // Category container is removed as requested
+    expect(find.text('Digital Marketing'), findsNothing);
 
-    String appBarTitle() => tester
-        .widget<Text>(find
-            .descendant(of: find.byType(AppBar), matching: find.byType(Text))
-            .first)
-        .data!;
+    // Close/delete button is present
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
-    // Swiping the carousel switches to the next screen and the title follows.
-    final titleBefore = appBarTitle();
-    await tester.drag(find.byType(PageView), const Offset(-400, 0));
+    // Email, phone and website are properly shown
+    expect(find.text('contact@sdcbusiness.com'), findsOneWidget);
+    expect(find.text('+919876543210'), findsOneWidget);
+    expect(find.text('https://sdcbusiness.com'), findsOneWidget);
+    expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget); // website open iconbutton
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('LeadCard cleanly hides missing email and phone without affecting other fields',
+      (WidgetTester tester) async {
+    final minimalLead = Lead(
+      id: 'test-2',
+      name: 'Minimal Lead',
+      platform: 'LinkedIn',
+      profileUrl: 'https://linkedin.com/in/minimal',
+      extractedAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LeadCard(lead: minimalLead),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    expect(appBarTitle(), isNot(titleBefore),
-        reason: 'swiping a pack should show the next screen\'s details');
+
+    expect(find.text('Minimal Lead'), findsOneWidget);
+    expect(find.text('LinkedIn'), findsOneWidget);
+    expect(find.byIcon(Icons.mail_outline_rounded), findsNothing);
+    expect(find.byIcon(Icons.phone_outlined), findsNothing);
+    expect(find.byIcon(Icons.language_rounded), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

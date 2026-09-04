@@ -10,14 +10,13 @@ plugins {
 // Load keystore properties
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
-if (keystorePropertiesFile.exists()) {
+val hasKeystore = keystorePropertiesFile.exists()
+if (hasKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
-fun envOrProperty(name: String, prop: String?): String {
-    return System.getenv(name) ?: prop ?: throw GradleException(
-        "Missing keystore password. Set $name environment variable or add it to key.properties"
-    )
+fun envOrProperty(name: String, prop: String?): String? {
+    return System.getenv(name) ?: prop
 }
 
 android {
@@ -30,12 +29,27 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    val keyAliasProp = keystoreProperties.getProperty("keyAlias")
+    val storeFileProp = keystoreProperties.getProperty("storeFile")
+    val keyPasswordProp = envOrProperty("MASTUI_KEY_PASSWORD", keystoreProperties.getProperty("keyPassword"))
+    val storePasswordProp = envOrProperty("MASTUI_STORE_PASSWORD", keystoreProperties.getProperty("storePassword"))
+
+    val canSignRelease = hasKeystore &&
+        !keyAliasProp.isNullOrBlank() &&
+        !storeFileProp.isNullOrBlank() &&
+        !keyPasswordProp.isNullOrBlank() &&
+        !storePasswordProp.isNullOrBlank()
+
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = envOrProperty("MASTUI_KEY_PASSWORD", keystoreProperties["keyPassword"] as? String)
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = envOrProperty("MASTUI_STORE_PASSWORD", keystoreProperties["storePassword"] as? String)
+        if (canSignRelease) {
+            create("release") {
+                keyAlias = keyAliasProp
+                keyPassword = keyPasswordProp
+                storeFile = storeFileProp?.let { path ->
+                    if (file(path).exists()) file(path) else rootProject.file(path)
+                }
+                storePassword = storePasswordProp
+            }
         }
     }
 
@@ -49,7 +63,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 }

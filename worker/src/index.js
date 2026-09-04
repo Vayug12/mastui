@@ -193,6 +193,53 @@ export default {
         return await handleGeneratePrompt(request, env, corsHeaders);
       }
 
+      // ── Cloudflare Workers AI: Text Completion & Lead Extraction ─────
+      if (path === '/ai/generate' && request.method === 'POST') {
+        const body = await request.json().catch(() => null);
+        if (!body || !body.prompt) {
+          return json({ error: 'Missing prompt' }, 400, corsHeaders);
+        }
+        try {
+          const messages = [];
+          if (body.system) {
+            messages.push({ role: 'system', content: body.system });
+          }
+          messages.push({ role: 'user', content: body.prompt });
+
+          const aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+            messages,
+            max_tokens: 1024,
+            temperature: 0.2,
+          });
+          return json({ response: aiResult.response || '' }, 200, corsHeaders);
+        } catch (err) {
+          console.error('ai/generate failed:', err);
+          return json({ error: 'AI generation failed: ' + err.message }, 500, corsHeaders);
+        }
+      }
+
+      if (path === '/ai/extract-leads' && request.method === 'POST') {
+        const body = await request.json().catch(() => null);
+        if (!body || !body.snippets || !Array.isArray(body.snippets)) {
+          return json({ error: 'Missing snippets array' }, 400, corsHeaders);
+        }
+        try {
+          const prompt = `Extract all business and individual leads from the following search snippets. Return ONLY valid JSON array with keys: "name", "businessName", "email", "phone", "website", "platform", "location", "niche".\n\nSnippets:\n${JSON.stringify(body.snippets)}`;
+          const aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+            messages: [
+              { role: 'system', content: 'You are a precise data extraction assistant that only outputs clean JSON.' },
+              { role: 'user', content: prompt },
+            ],
+            max_tokens: 1500,
+            temperature: 0.1,
+          });
+          return json({ response: aiResult.response || '[]' }, 200, corsHeaders);
+        } catch (err) {
+          console.error('ai/extract-leads failed:', err);
+          return json({ error: 'AI lead extraction failed: ' + err.message }, 500, corsHeaders);
+        }
+      }
+
       // ── Admin: aggregated analytics ──────────────────────────────────
       if (path === '/admin/analytics' && request.method === 'GET') {
         if (!isAdminAuthorized(request, env)) {
