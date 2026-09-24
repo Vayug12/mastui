@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/lead_model.dart';
+import 'pdf_export_service.dart';
 
 /// Manages local persistence, clipboard copying, CSV file saving, and sharing for leads.
 class LeadStorageService {
@@ -83,6 +84,59 @@ class LeadStorageService {
       return file;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Saves a formatted PDF report file locally on the device.
+  Future<File?> savePdfFile(List<Lead> leads, {String? niche}) async {
+    if (leads.isEmpty) return null;
+    try {
+      final pdfBytes = PdfExportService.instance.generateLeadReportPdf(leads, niche: niche);
+      final safeNiche = (niche != null && niche.trim().isNotEmpty)
+          ? niche.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+          : 'leads';
+      final fileName = 'leads_${safeNiche}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      Directory directory;
+      try {
+        directory = await getApplicationDocumentsDirectory();
+      } catch (_) {
+        directory = await getTemporaryDirectory();
+      }
+
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(pdfBytes);
+      return file;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Exports and invokes native save/share sheet for the PDF lead report.
+  Future<bool> exportAndDownloadPdf(List<Lead> leads, {String? niche}) async {
+    if (leads.isEmpty) return false;
+    try {
+      final file = await savePdfFile(leads, niche: niche);
+      if (file == null || !await file.exists()) {
+        return false;
+      }
+
+      final xFile = XFile(
+        file.path,
+        mimeType: 'application/pdf',
+        name: file.uri.pathSegments.last,
+      );
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [xFile],
+          subject: 'GetLead PDF Export (${leads.length} leads)',
+          text: 'Exported ${leads.length} business leads from GetLead as PDF.',
+        ),
+      );
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

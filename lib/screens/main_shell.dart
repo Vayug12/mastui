@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/app_review_service.dart';
+import '../services/app_update_service.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
 
@@ -19,6 +20,17 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     unawaited(AppReviewService.instance.trackLaunch());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(AppUpdateService.instance.checkForFlexibleUpdate(context));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    AppUpdateService.instance.dispose();
+    super.dispose();
   }
 
   @override

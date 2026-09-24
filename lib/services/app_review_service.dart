@@ -50,4 +50,13 @@ class AppReviewService {
       ));
     });
   }
+
+  Future<void> openStoreListing() async {
+    try {
+      final review = InAppReview.instance;
+      await review.openStoreListing();
+    } catch (e) {
+      debugPrint('Error opening store listing: $e');
+    }
+  }
 }

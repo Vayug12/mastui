@@ -8,15 +8,18 @@ plugins {
 }
 
 // Load keystore properties
-val keystorePropertiesFile = rootProject.file("key.properties")
+val keystorePropertiesFile = listOf(
+    file("key.properties"),
+    rootProject.file("key.properties")
+).firstOrNull { it.exists() }
 val keystoreProperties = Properties()
-val hasKeystore = keystorePropertiesFile.exists()
+val hasKeystore = keystorePropertiesFile != null
 if (hasKeystore) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile!!))
 }
 
 fun envOrProperty(name: String, prop: String?): String? {
-    return System.getenv(name) ?: prop
+    return if (!prop.isNullOrBlank()) prop else System.getenv(name)
 }
 
 android {

@@ -1,17 +1,4 @@
-/**
- * MastUI API Worker.
- *
- * Routes:
- *   GET    /, /catalog                 serve the published catalog
- *   GET    /designs/:id.png            serve a design screenshot
- *   POST   /admin/upload               upload or replace a design
- *   DELETE /admin/designs/:id          permanently remove a design
- *   POST   /analytics/event            track view / copy events
- *   POST   /analytics/feedback         submit user feedback
- *   POST   /generate-prompt            build a prompt from a user's screenshot
- *   GET    /admin/analytics            aggregated analytics (admin)
- *   GET    /admin/feedback             all feedback entries (admin)
- */
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);

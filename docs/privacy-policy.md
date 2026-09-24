@@ -1,141 +1,135 @@
-# Privacy Policy — Mast UI
+# Privacy Policy — GetLead
 
-**Effective Date: 31 July 2026**
+**Effective Date: September 5, 2026**  
+**Last Updated: September 5, 2026**
 
-Thank you for using Mast UI ("the App"). This Privacy Policy explains how your
-information is handled when you use our application.
+Thank you for using **GetLead** ("the App", "we", "our", or "us"), developed by **Sanju Yadav**. This Privacy Policy explains how information is handled when you download, install, and use the GetLead mobile application.
 
-## 1. Information We Collect
+GetLead is an intelligent lead discovery and outbound client acquisition tool designed to help professionals, businesses, agencies, and freelancers find publicly available commercial contact information across the web.
 
-Mast UI lets you browse UI design inspiration, copy prompts, and generate an AI
-prompt from a screenshot you upload.
+We are committed to user privacy and transparency. This Privacy Policy complies with the **Google Play Developer Program Policies**, **Google AdMob Policies**, the **General Data Protection Regulation (GDPR)**, and the **California Consumer Privacy Act (CCPA/CPRA)**.
 
-You do not need an account to use the App. We do not collect your name, email
-address, phone number, home address, or passwords.
+---
 
-We do process the following:
+## 1. Summary of Key Points
 
-- **A random device identifier.** When you first open the App, we generate a
-  random ID and store it on your device. It is not derived from your hardware,
-  your account, or your advertising ID, and it cannot be traced back to you. Its
-  only purpose is to count how many prompt generations a device has used today.
-- **Screenshots you choose to upload** to the prompt generator (see Section 3).
-- **In-app activity**, such as which designs are viewed, copied, or downloaded,
-  and what is typed into the search box (see Section 5).
+- **100% Free & No Account Required**: You do not need to register, log in, or provide any personal details (such as your name, personal email, address, or password) to use the App.
+- **On-Device Storage Only**: All your search queries, discovered leads, and saved contact lists are stored **locally on your device**. We do not run external servers or databases that collect or store your discovered leads.
+- **Public Commercial Information Only**: The App searches publicly accessible web information (such as public business listings, business websites, and social profiles) already published online by businesses themselves.
+- **Advertising**: The App is supported by advertisements served by **Google AdMob**. AdMob may collect device identifiers and usage metrics to serve relevant ads.
+- **We Do Not Sell Your Data**: We do not sell, rent, or monetize your personal information.
 
-## 2. Purchases and Subscriptions
+---
 
-Mast UI Pro is a paid subscription (and a one-time Lifetime option).
+## 2. Information Handled by the App
 
-- Payments are processed entirely by **Google Play** or the **Apple App Store**.
-  We never see or store your card number, billing address, or payment details.
-- We use **RevenueCat** to check whether your purchase is active so the App can
-  unlock Pro features. RevenueCat receives an anonymous app user ID, your
-  purchase receipt, and basic device and country information from the store.
-- To cancel or change your plan, use the subscription settings in Google Play or
-  the App Store. Deleting the App does not cancel a subscription.
+### A. Information Stored Locally on Your Device
+- **Search Queries & Selected Filters**: The business niches (e.g., "Real Estate", "Dentists"), target locations (e.g., city or region), and platform filters you choose.
+- **Discovered Business Contacts**: Public business names, public email addresses, phone numbers, websites, and social profile links extracted from public web searches.
+- **Storage Location**: This data is stored strictly on your local device using Android `SharedPreferences`. It never leaves your device and is never uploaded to any developer server.
 
-RevenueCat's privacy policy: https://www.revenuecat.com/privacy/
+### B. Outbound Communication Actions
+When you tap to email, call, open a website, or contact a business on WhatsApp:
+- The App delegates these actions directly to your device's native apps (such as your default dialer, email client, browser, or WhatsApp).
+- The App does not monitor, record, or store your private messages, conversations, or calls.
 
-## 3. Screenshot to Prompt (AI Feature)
+### C. Technical Data Collected Automatically by Third-Party Services (AdMob)
+To keep the App free for everyone, we display ads using **Google AdMob**. Google AdMob automatically collects certain non-personally identifiable technical information from your device, including:
+- **Advertising Identifiers**: Google Advertising ID (GAID).
+- **Device Specifications**: Device model, operating system version, screen resolution, mobile carrier, and language.
+- **General Location Information**: Approximate location derived from IP address (at city or country level; the App does not collect precise GPS location).
+- **Ad Interaction & Diagnostics**: Impressions, clicks, app crashes, and ANR performance reports.
 
-When you use the "Screenshot to prompt" feature, the image you select is
-uploaded to our server (running on Cloudflare Workers) and passed to an AI
-vision model (Cloudflare Workers AI) which describes the interface so we can
-build a prompt from it.
+---
 
-- **The uploaded image is not stored.** It is held in memory only for as long as
-  the model needs to read it, then discarded.
-- We do keep a small record of the request — the random device ID, the date, the
-  target platform you chose, and the detected style name — so we can enforce the
-  daily limit and detect abuse. This record contains no image and no personal
-  information.
-- Do not upload screenshots containing personal, confidential, or sensitive
-  information. You are responsible for what you choose to upload.
+## 3. Google AdMob & Advertising Compliance
 
-Cloudflare's privacy policy: https://www.cloudflare.com/privacypolicy/
+We use **Google AdMob** (provided by Google LLC) as our advertising partner.
 
-## 4. Advertising
+### How Google Uses Data:
+Google AdMob uses collected device identifiers to:
+- Serve personalized or non-personalized advertisements based on user preferences and regional consent.
+- Enforce frequency capping (so you don't see the same ad repeatedly).
+- Detect and prevent invalid traffic, fraud, and bot activity.
+- Measure advertising performance and ad delivery.
 
-The free version of the App displays advertisements using **Google AdMob**. Ads
-are not shown to Mast UI Pro subscribers.
+### User Consent & Opt-Out (GDPR, CCPA & Android Settings):
+- **EEA/UK Consent**: In regions where consent is legally required, a Google-certified consent management dialog is presented allowing users to accept or customize ad preferences.
+- **Device Opt-Out**: You can reset or delete your Advertising ID, or opt out of personalized ads anytime through your Android device settings:
+  - Open **Settings** > **Google** > **Ads**.
+  - Tap **Reset advertising ID** or **Delete advertising ID**.
+- For more details on Google's advertising practices and how Google processes data, please visit:
+  - [How Google uses information from sites or apps that use our services](https://policies.google.com/technologies/partner-sites)
+  - [Google Privacy Policy](https://policies.google.com/privacy)
+  - [Google AdMob Help Center](https://support.google.com/admob/answer/6128543)
 
-Google AdMob may automatically collect certain information to provide and
-improve advertising services, including device information, advertising ID, IP
-address, app interactions, and diagnostic information. This information is
-collected by Google in accordance with its own privacy policy.
+---
 
-- https://policies.google.com/privacy
-- https://support.google.com/admob
+## 4. In-App Review & Rating
 
-You can reset or delete your advertising ID in your device settings.
+GetLead integrates the official **Google Play In-App Review API** (`in_app_review`) allowing you to rate the App and leave feedback on the Google Play Store. When you tap "Rate Us", you interact directly with the Google Play Store interface. No personal information is collected by us during this process.
 
-## 5. Analytics
+---
 
-We collect basic, non-identifying usage events to understand which designs are
-popular and improve the catalogue. These events record the design ID, its
-category, the type of interaction (view, copy, download, or how long a design
-was on screen), and search terms typed into the App.
+## 5. How Discovered Lead Information is Sourced and Used
 
-These events are not linked to your device identifier or to any account, and are
-used only in aggregate. Search terms are stored as typed — please do not enter
-personal information into the search box.
+- GetLead functions as an intelligent web search aggregator querying publicly indexed internet search engines (such as DuckDuckGo and public search indexes).
+- The App **does not hack, scrape private accounts, access password-protected data, or access private social media feeds**.
+- All displayed contact details (business support emails, business telephone numbers) are publicly indexed information intended for professional B2B discovery.
+- **User Control**: You own and control all discovered leads on your device. You can export them at any time to CSV or PDF, or delete them instantly using the "Clear Leads" option.
 
-## 6. Data Storage and Retention
+---
 
-Data is stored on **Cloudflare** infrastructure (Workers and R2 object storage).
+## 6. Data Sharing and Third Parties
 
-- Daily usage counters are keyed by date and expire naturally as they stop being
-  read; they hold only a count.
-- Request metadata and analytics events are retained for up to 12 months.
-- We do not sell your data or share it with advertisers beyond the ad service
-  described in Section 4.
+We do not sell, rent, or trade your personal data. Data is only shared with third parties under the following limited circumstances:
+1. **Google AdMob**: For ad serving and ad measurement, strictly as described in Section 3.
+2. **Legal Compliance**: If required by applicable law, regulation, subpoena, or lawful request from public authorities.
+3. **Protection**: To prevent fraud, protect the security of the App, and enforce our terms of service.
 
-## 7. Third-Party Services
+---
 
-The App uses the following third-party services, each operating under its own
-privacy policy:
+## 7. Data Retention and Deletion
 
-| Service | Purpose |
-|---|---|
-| Google AdMob | Advertising (free users only) |
-| Google Play Billing / Apple App Store | Payment processing |
-| RevenueCat | Subscription status |
-| Cloudflare (Workers, Workers AI, R2) | Backend, AI prompt generation, storage |
+- **Local Lead Data**: All saved leads, searches, and preferences remain on your device until you choose to delete them.
+- **Instant Deletion**: You can tap **Clear Leads** in the App menu to delete all saved leads immediately.
+- **Uninstalling**: Uninstalling GetLead from your device automatically and permanently deletes all locally stored leads, preferences, and data.
 
-## 8. Children's Privacy
+---
 
-Mast UI is not intended for children under the age of 13. We do not knowingly
-collect personal information from children. If you believe a child has provided
-personal information through the App, please contact us so we can take
-appropriate action.
+## 8. Children's Privacy (COPPA Compliance)
 
-## 9. Data Security
+GetLead is a B2B productivity tool and is **not intended for children under 13 years of age** (or under 16 in the European Union). We do not knowingly collect personal information from children. If you believe a child has provided any personal information, please contact us immediately so we can take appropriate action.
 
-We take reasonable measures to provide a secure application experience. All
-communication between the App and our server uses HTTPS. However, no method of
-electronic transmission or storage is completely secure, and we cannot guarantee
-absolute security.
+---
 
-## 10. Your Rights
+## 9. User Rights (GDPR & CCPA/CPRA)
 
-Because Mast UI does not create user accounts, we hold very little data about
-you and nothing that identifies you personally.
+Depending on your jurisdiction, you have statutory privacy rights:
+- **Right to Access & Portability**: You have full access to your saved leads inside the App and can export them to CSV or PDF at any time.
+- **Right to Erasure (Deletion)**: You can delete all your data instantly within the App or by clearing App storage in your device settings.
+- **Right to Opt-Out of Ad Personalization**: You can opt out of personalized advertising via your device settings (**Settings > Google > Ads**).
+- **Non-Discrimination**: We will never discriminate against you for exercising your legal privacy rights.
 
-If you would like the usage records associated with your device removed, email
-us the request and we will delete them. You can also clear the App's storage or
-uninstall the App, which removes the random device identifier from your device.
+---
 
-For data held by Google, Apple, or RevenueCat in connection with a purchase,
-please contact those services directly.
+## 10. Security
+
+We take reasonable technical precautions to safeguard the App. All communication between the App and external web search APIs or AdMob uses encrypted HTTPS/TLS protocols. However, please remember that no method of transmission over the internet is 100% secure.
+
+---
 
 ## 11. Changes to This Privacy Policy
 
-We may update this Privacy Policy from time to time. Any changes will be posted
-on this page with a revised Effective Date. Continued use of the App after
-changes become effective constitutes acceptance of the updated policy.
+We may update this Privacy Policy from time to time. When changes are made, the "Effective Date" and "Last Updated" date at the top will be updated. We encourage you to review this Privacy Policy periodically.
+
+---
 
 ## 12. Contact Us
 
-**Developer:** Sanju Yadav
-**Email:** sanjeev.yadav1201@gmail.com
+If you have any questions, suggestions, or concerns regarding this Privacy Policy or your data, please contact:
+
+- **Developer / Publisher**: Sanju Yadav
+- **Application**: GetLead (mastui)
+- **Email**: sanjeev.yadav1201@gmail.com
+- **Website**: [https://sites.google.com/view/mastuiprivacypolicy/home](https://sites.google.com/view/mastuiprivacypolicy/home)

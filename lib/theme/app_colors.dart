@@ -21,9 +21,25 @@ abstract final class AppColors {
   static const Color textDisabled = Color(0xFFBDBDBD);
   static const Color textHint = Color(0xFF8A8A8A);
 
-  // Accent & States (Single Primary Accent: #10A37F)
-  static const Color primary = Color(0xFF10A37F);
-  static const Color primaryHover = Color(0xFF0D8C6B);
+  // Primary CTA & Actions (ChatGPT Pure Black #000000)
+  static const Color primaryCta = Color(0xFF000000);
+  static const Color onPrimaryCta = Color(0xFFFFFFFF);
+  static const Color primaryCtaHover = Color(0xFF222222);
+
+  // Primary Theme Color (Pure Black for signature monochrome ChatGPT look)
+  static const Color primary = Color(0xFF000000);
+  static const Color primaryHover = Color(0xFF222222);
+
+  // Secondary Accents (ChatGPT OpenAI Green & Apple/ChatGPT Blue)
+  static const Color secondaryGreen = Color(0xFF10A37F);
+  static const Color secondaryGreenHover = Color(0xFF0D8C6B);
+  static const Color secondaryGreenSubtle = Color(0x1410A37F); // 8% soft fill
+
+  static const Color secondaryBlue = Color(0xFF0066FF);
+  static const Color secondaryBlueHover = Color(0xFF0052CC);
+  static const Color secondaryBlueSubtle = Color(0x140066FF); // 8% soft fill
+
+  // States
   static const Color success = Color(0xFF10A37F);
   static const Color warning = Color(0xFFF5A623);
   static const Color danger = Color(0xFFE5484D);

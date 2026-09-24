@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import '../models/lead_model.dart';
+import 'b2b_email_service.dart';
 import 'duckduckgo_search_service.dart';
 
 /// Configuration for lead discovery.
@@ -11,7 +12,7 @@ class LeadDiscoveryConfig {
   final List<String> platforms;
   final bool extractEmails;
   final bool extractPhones;
-  final int maxResults;
+  final int? maxResults;
   final int page;
 
   const LeadDiscoveryConfig({
@@ -20,7 +21,7 @@ class LeadDiscoveryConfig {
     this.platforms = const ['Instagram', 'LinkedIn', 'Facebook'],
     this.extractEmails = true,
     this.extractPhones = true,
-    this.maxResults = 50,
+    this.maxResults,
     this.page = 1,
   });
 }
@@ -30,6 +31,12 @@ class LeadDiscoveryConfig {
 class LeadDiscoveryService {
   LeadDiscoveryService._();
   static final instance = LeadDiscoveryService._();
+
+  /// Polite crawling delay between queries (can be zero in test environments)
+  static Duration crawlDelay = const Duration(milliseconds: 400);
+
+  /// Optional custom stream provider for tests
+  Stream<Lead> Function(LeadDiscoveryConfig config)? mockStreamHandler;
 
   static final RegExp _emailRegex = RegExp(
     r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
@@ -50,13 +57,11 @@ class LeadDiscoveryService {
     caseSensitive: false,
   );
 
-  /// Generates natural, bot-resistant search queries without rigid triple-quotes.
+  /// Generates high-accuracy, exact-phrase search queries for targeted platforms.
   List<String> buildQueries(LeadDiscoveryConfig config) {
     final queries = <String>[];
-    final cleanNiche = config.niche.trim();
-    final cleanLoc = config.location.trim();
-
-    final locationSegment = cleanLoc.isNotEmpty ? cleanLoc : '';
+    final cleanNiche = config.niche.replaceAll('"', '').trim();
+    final cleanLoc = config.location.replaceAll('"', '').trim();
 
     final platformDomains = <String, String>{
       'Instagram': 'site:instagram.com',
@@ -67,60 +72,69 @@ class LeadDiscoveryService {
     };
 
     final activePlatforms = config.platforms.isEmpty
-        ? platformDomains.keys.toList()
+        ? ['Instagram', 'LinkedIn', 'Facebook', 'X']
         : config.platforms;
 
     for (final platform in activePlatforms) {
       final domain = platformDomains[platform] ?? 'site:${platform.toLowerCase()}.com';
+      final nicheTerm = '"$cleanNiche"';
+      final locTerm = cleanLoc.isNotEmpty ? '"$cleanLoc"' : '';
 
-      // 1. Natural email search queries
+      // 1. Exact email footprint queries
       if (config.extractEmails) {
-        if (locationSegment.isNotEmpty) {
-          queries.add('$domain $cleanNiche $locationSegment @gmail.com');
-          queries.add('$domain $cleanNiche $locationSegment email contact');
+        if (locTerm.isNotEmpty) {
+          queries.add('$domain $nicheTerm $locTerm "@gmail.com"');
+          queries.add('$domain $nicheTerm $locTerm "email"');
         } else {
-          queries.add('$domain $cleanNiche @gmail.com');
-          queries.add('$domain $cleanNiche email contact');
+          queries.add('$domain $nicheTerm "@gmail.com"');
+          queries.add('$domain $nicheTerm "email"');
         }
       }
 
-      // 2. Natural phone & WhatsApp queries
+      // 2. Exact phone & WhatsApp footprint queries
       if (config.extractPhones) {
-        if (locationSegment.isNotEmpty) {
-          queries.add('$domain $cleanNiche $locationSegment WhatsApp phone');
-          queries.add('$domain $cleanNiche $locationSegment +91');
+        if (locTerm.isNotEmpty) {
+          queries.add('$domain $nicheTerm $locTerm "WhatsApp"');
+          queries.add('$domain $nicheTerm $locTerm "phone"');
+          queries.add('$domain $nicheTerm $locTerm "+91"');
         } else {
-          queries.add('$domain $cleanNiche WhatsApp');
-          queries.add('$domain $cleanNiche contact phone');
+          queries.add('$domain $nicheTerm "WhatsApp"');
+          queries.add('$domain $nicheTerm "phone"');
+          queries.add('$domain $nicheTerm "contact"');
         }
       }
 
-      // 3. General platform presence query
-      if (locationSegment.isNotEmpty) {
-        queries.add('$domain $cleanNiche $locationSegment');
+      // 3. Platform presence query
+      if (locTerm.isNotEmpty) {
+        queries.add('$domain $nicheTerm $locTerm');
       } else {
-        queries.add('$domain $cleanNiche');
+        queries.add('$domain $nicheTerm');
       }
     }
 
     return queries;
   }
 
-  /// Streams discovered leads in real time up to config.maxResults (default 50).
+  /// Streams discovered leads in real time. If [config.maxResults] is set,
+  /// limits results to that number; otherwise streams all discovered leads without limit.
   Stream<Lead> discoverLeadsStream(LeadDiscoveryConfig config) async* {
+    if (mockStreamHandler != null) {
+      yield* mockStreamHandler!(config);
+      return;
+    }
     final queries = buildQueries(config);
     final seenKeys = <String>{};
     var totalYielded = 0;
 
     for (final query in queries) {
-      if (totalYielded >= config.maxResults) break;
+      if (config.maxResults != null && totalYielded >= config.maxResults!) break;
 
       final results = await DuckDuckGoSearchService.instance.search(query, page: config.page);
 
       for (final item in results) {
-        if (totalYielded >= config.maxResults) break;
+        if (config.maxResults != null && totalYielded >= config.maxResults!) break;
 
-        final lead = _extractLeadFromItem(item, config);
+        final lead = await _extractLeadFromItem(item, config);
         if (lead == null) continue;
 
         // Deduplication key
@@ -138,41 +152,156 @@ class LeadDiscoveryService {
       }
 
       // Polite crawling delay
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (crawlDelay > Duration.zero) {
+        await Future<void>.delayed(crawlDelay);
+      }
     }
 
     // Safety Net Fallback: If network queries returned 0 results, generate realistic contextual leads
     if (totalYielded == 0) {
       final fallbackLeads = generateFallbackLeads(config);
       for (final lead in fallbackLeads) {
-        if (totalYielded >= config.maxResults) break;
+        if (config.maxResults != null && totalYielded >= config.maxResults!) break;
         totalYielded++;
         yield lead;
       }
     }
   }
 
-  /// Extracts structured Lead from a single SearchResultItem.
-  Lead? _extractLeadFromItem(SearchResultItem item, LeadDiscoveryConfig config) {
+  /// Validates that the URL belongs to a genuine user/creator profile and not a system page or generic post.
+  bool _isInvalidSocialUrl(String url, String platform) {
+    final lower = url.toLowerCase();
+    final uri = Uri.tryParse(url);
+    final segments = uri?.pathSegments.where((s) => s.isNotEmpty).toList() ?? [];
+
+    switch (platform) {
+      case 'Instagram':
+        if (!lower.contains('instagram.com')) return true;
+        if (segments.isEmpty) return true;
+        const invalidIg = {
+          'p', 'reel', 'reels', 'explore', 'stories', 'tv', 'accounts',
+          'direct', 'tags', 'directory', 'legal', 'about', 'developer',
+        };
+        if (invalidIg.contains(segments.first.toLowerCase())) return true;
+        return false;
+
+      case 'LinkedIn':
+        if (!lower.contains('linkedin.com')) return true;
+        if (!lower.contains('/in/') && !lower.contains('/company/')) return true;
+        const invalidLi = {'pulse', 'posts', 'jobs', 'learning', 'help', 'feed', 'login', 'signup', 'legal'};
+        if (segments.any((s) => invalidLi.contains(s.toLowerCase()))) return true;
+        return false;
+
+      case 'Facebook':
+        if (!lower.contains('facebook.com')) return true;
+        if (segments.isEmpty) return true;
+        const invalidFb = {'sharer', 'share', 'login', 'recover', 'help', 'policies', 'pages', 'groups', 'watch', 'events', 'marketplace', 'gaming', 'ads'};
+        if (invalidFb.contains(segments.first.toLowerCase())) return true;
+        return false;
+
+      case 'X':
+        if (!lower.contains('x.com') && !lower.contains('twitter.com')) return true;
+        if (segments.isEmpty) return true;
+        const invalidX = {'i', 'explore', 'home', 'notifications', 'messages', 'search', 'settings', 'privacy', 'tos', 'intent', 'share'};
+        if (invalidX.contains(segments.first.toLowerCase())) return true;
+        return false;
+
+      case 'Web':
+        return false;
+      default:
+        return false;
+    }
+  }
+
+  /// Normalizes and cleans profile URL to a canonical direct link.
+  String _normalizeProfileUrl(String url, String platform) {
+    try {
+      final uri = Uri.parse(url);
+      var host = uri.host.replaceFirst('www.', '').replaceFirst('in.', '').replaceFirst('mobile.', '').replaceFirst('m.', '');
+      if (host.isEmpty) host = '${platform.toLowerCase()}.com';
+      final cleanUri = Uri(
+        scheme: 'https',
+        host: host,
+        pathSegments: uri.pathSegments.where((s) => s.isNotEmpty),
+      );
+      var normalized = cleanUri.toString();
+      if (!normalized.endsWith('/') && platform == 'Instagram') {
+        normalized = '$normalized/';
+      }
+      return normalized;
+    } catch (_) {
+      return url;
+    }
+  }
+
+  /// Extracts structured Lead from a single SearchResultItem with Apollo-style B2B email intelligence.
+  Future<Lead?> _extractLeadFromItem(SearchResultItem item, LeadDiscoveryConfig config) async {
     final combinedText = '${item.title} ${item.snippet}';
 
-    // 1. Extract Email (standard or obfuscated)
-    String? email = _extractEmail(combinedText);
-
-    // 2. Extract Phone
-    String? phone = _extractPhone(combinedText);
-
-    // 3. Determine Platform
+    // 1. Determine Platform
     var platform = 'Web';
     final urlLower = item.url.toLowerCase();
     if (urlLower.contains('instagram.com')) {
       platform = 'Instagram';
-    } else if (urlLower.contains('linkedin.com')) {
+    } else if (urlLower.contains('linkedin.com/in/') || urlLower.contains('linkedin.com/company/')) {
       platform = 'LinkedIn';
     } else if (urlLower.contains('facebook.com')) {
       platform = 'Facebook';
     } else if (urlLower.contains('x.com') || urlLower.contains('twitter.com')) {
       platform = 'X';
+    }
+
+    // 2. Platform Filtering: If user searched for specific platforms, reject random third-party blog/article links
+    final activePlatforms = config.platforms.isEmpty
+        ? ['Instagram', 'LinkedIn', 'Facebook', 'X']
+        : config.platforms;
+    if (!activePlatforms.contains(platform)) {
+      return null;
+    }
+
+    // 3. Reject invalid system/feed/post URLs
+    if (_isInvalidSocialUrl(item.url, platform)) {
+      return null;
+    }
+
+    // 4. Extract Email (standard or obfuscated)
+    String? email = _extractEmail(combinedText);
+
+    // 5. Extract Phone
+    String? phone = _extractPhone(combinedText);
+
+    // 6. Parse Title & Business Name
+    final parsedNames = _parseNameAndBusiness(item.title, platform);
+
+    // 7. Extract Website
+    final website = _extractWebsite(combinedText, item.url, platform);
+
+    final cleanProfileUrl = _normalizeProfileUrl(item.url, platform);
+
+    bool isWorkEmail = false;
+    String? emailStatus = email != null ? 'public' : null;
+    List<String>? alternativeEmails;
+
+    // 8. Apollo-style B2B Work Email Intelligence:
+    // If no public email is present in the snippet, predict and verify corporate work email
+    if (email == null && config.extractEmails && parsedNames.$1.isNotEmpty && parsedNames.$1 != 'Business Lead') {
+      try {
+        final b2bResult = await B2bEmailService.instance.predictAndVerifyWorkEmail(
+          fullName: parsedNames.$1,
+          businessName: parsedNames.$2,
+          website: website,
+          bioSnippet: item.snippet,
+        );
+
+        if (b2bResult != null) {
+          email = b2bResult.primaryEmail;
+          isWorkEmail = true;
+          emailStatus = b2bResult.status;
+          alternativeEmails = b2bResult.alternativePatterns;
+        }
+      } catch (_) {
+        // Fallback gracefully on any unexpected network error
+      }
     }
 
     // Filter rules:
@@ -182,32 +311,28 @@ class LeadDiscoveryService {
     }
     // If neither contact is found, allow verified social profiles with informative bios
     if (email == null && phone == null) {
-      // If snippet doesn't have email/phone, check if it has a direct social handle or bio
       final handle = _extractHandle(item.title, item.url);
       if (handle == null && item.snippet.length < 30) {
         return null;
       }
     }
 
-    // 4. Parse Title & Business Name
-    final parsedNames = _parseNameAndBusiness(item.title, platform);
-
-    // 3. Extract Website
-    final website = _extractWebsite(combinedText, item.url, platform);
-
     return Lead(
-      id: _generateId(item.url),
+      id: _generateId(cleanProfileUrl),
       name: parsedNames.$1,
       businessName: parsedNames.$2,
       email: email,
       phone: phone,
       website: website,
       platform: platform,
-      profileUrl: item.url,
+      profileUrl: cleanProfileUrl,
       location: config.location.isNotEmpty ? config.location : null,
       niche: config.niche,
       bioSnippet: item.snippet,
       extractedAt: DateTime.now(),
+      isWorkEmail: isWorkEmail,
+      emailStatus: emailStatus,
+      alternativeEmails: alternativeEmails,
     );
   }
 

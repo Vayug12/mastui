@@ -9,8 +9,10 @@ import 'app_colors.dart';
 abstract final class AppTheme {
   static ThemeData get light {
     const scheme = ColorScheme.light(
-      primary: AppColors.primary,
-      onPrimary: Colors.white,
+      primary: AppColors.primaryCta,
+      onPrimary: AppColors.onPrimaryCta,
+      secondary: AppColors.secondaryGreen,
+      tertiary: AppColors.secondaryBlue,
       surface: AppColors.background,
       onSurface: AppColors.textPrimary,
       outline: AppColors.border,
@@ -94,8 +96,8 @@ abstract final class AppTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.primaryCta,
+          foregroundColor: AppColors.onPrimaryCta,
           minimumSize: const Size.fromHeight(52),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),

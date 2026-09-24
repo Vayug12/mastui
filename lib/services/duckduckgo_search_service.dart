@@ -41,6 +41,9 @@ class DuckDuckGoSearchService {
   bool _isDdgRateLimited = false;
   bool get isDdgRateLimited => _isDdgRateLimited;
 
+  /// Optional mock results for test environments
+  List<SearchResultItem>? testMockResults;
+
   /// Searches using the resilient multi-engine pipeline:
   /// Primary: Yahoo Search -> Secondary: Bing -> Tertiary: DuckDuckGo.
   Future<List<SearchResultItem>> search(
@@ -48,6 +51,9 @@ class DuckDuckGoSearchService {
     int page = 1,
     Duration timeout = const Duration(seconds: 12),
   }) async {
+    if (testMockResults != null) {
+      return testMockResults!;
+    }
     // 1. Primary Engine: Yahoo Search (100% success rate, no CAPTCHA blocks)
     try {
       final yahooResults = await searchYahoo(query, page: page, timeout: timeout);
@@ -368,11 +374,26 @@ class DuckDuckGoSearchService {
     return results;
   }
 
+  /// Cleans redirect URLs from Bing, Yahoo, and DuckDuckGo into direct destination URLs.
+  String cleanRedirectUrl(String rawUrl) {
+    var url = rawUrl.trim();
+    if (url.contains('/ck/a?') || url.contains('bing.com/ck/a?')) {
+      return _cleanBingUrl(url);
+    }
+    if (url.contains('/RU=')) {
+      return _cleanYahooUrl(url);
+    }
+    if (url.contains('uddg=')) {
+      return _cleanDdgUrl(url);
+    }
+    return url;
+  }
+
   /// Decodes Yahoo redirect URLs: /RU=https%3a%2f%2f.../RK=2/
   String _cleanYahooUrl(String rawUrl) {
-    var url = rawUrl.trim();
+    var url = rawUrl.trim().replaceAll('&amp;', '&');
     if (url.contains('/RU=')) {
-      final match = RegExp(r'/RU=([^/]+)/RK=').firstMatch(url);
+      final match = RegExp(r'/RU=([^/]+)(?:/RK=|\/|$)').firstMatch(url);
       if (match != null) {
         final encoded = match.group(1) ?? '';
         return Uri.decodeComponent(encoded);
@@ -383,16 +404,21 @@ class DuckDuckGoSearchService {
 
   /// Decodes Bing redirect URLs: bing.com/ck/a?...&u=a1<base64>
   String _cleanBingUrl(String rawUrl) {
-    var url = rawUrl.trim();
-    if (url.contains('bing.com/ck/a?') && url.contains('&u=')) {
-      final uParam = Uri.tryParse(url)?.queryParameters['u'];
-      if (uParam != null && uParam.startsWith('a1')) {
+    var url = rawUrl.trim().replaceAll('&amp;', '&');
+    if (url.contains('/ck/a?') || url.contains('bing.com/ck/a?')) {
+      final match = RegExp(r'[?&](?:amp;)?u=([^&]+)').firstMatch(url);
+      if (match != null) {
+        var uVal = Uri.decodeComponent(match.group(1)!);
+        if (uVal.startsWith('a1') || uVal.startsWith('a0')) {
+          uVal = uVal.substring(2);
+        }
         try {
-          var b64 = uParam.substring(2);
+          var b64 = uVal;
           while (b64.length % 4 != 0) {
             b64 += '=';
           }
-          final decoded = utf8.decode(base64Url.decode(b64));
+          b64 = b64.replaceAll('-', '+').replaceAll('_', '/');
+          final decoded = utf8.decode(base64.decode(b64));
           if (decoded.startsWith('http')) return decoded;
         } catch (_) {}
       }
@@ -402,8 +428,12 @@ class DuckDuckGoSearchService {
 
   /// Decodes DuckDuckGo redirect URLs: /l/?uddg=https%3A%2F%2F...
   String _cleanDdgUrl(String rawUrl) {
-    var url = rawUrl.trim();
+    var url = rawUrl.trim().replaceAll('&amp;', '&');
     if (url.contains('uddg=')) {
+      final match = RegExp(r'[?&]uddg=([^&]+)').firstMatch(url);
+      if (match != null) {
+        return Uri.decodeComponent(match.group(1)!);
+      }
       final uri = Uri.tryParse(url.startsWith('http') ? url : 'https://duckduckgo.com$url');
       if (uri != null && uri.queryParameters.containsKey('uddg')) {
         return uri.queryParameters['uddg']!;

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mastui/models/lead_model.dart';
 import 'package:mastui/services/duckduckgo_search_service.dart';
 import 'package:mastui/services/lead_discovery_service.dart';
+import 'package:mastui/services/pdf_export_service.dart';
 
 void main() {
   group('Lead Model Tests', () {
@@ -50,6 +51,71 @@ void main() {
       expect(row, contains('"Sharma Gaming ""YT"""'));
       expect(row, contains('"gamer@gmail.com"'));
       expect(row, contains('"Instagram"'));
+    });
+  });
+
+  group('PdfExportService Tests', () {
+    test('Generates valid standard PDF 1.4 byte output with proper header and trailer', () {
+      final leads = [
+        Lead(
+          id: '1',
+          name: 'Priya Sharma',
+          businessName: 'Sharma Dental Clinic',
+          email: 'priya@sharmadental.com',
+          phone: '+91 98765 43210',
+          platform: 'Instagram',
+          profileUrl: 'https://instagram.com/sharmadental',
+          location: 'Delhi',
+          niche: 'Dentists',
+          extractedAt: DateTime.now(),
+        ),
+      ];
+
+      final pdfBytes = PdfExportService.instance.generateLeadReportPdf(
+        leads,
+        niche: 'Dentists',
+      );
+
+      final pdfString = String.fromCharCodes(pdfBytes);
+      expect(pdfString.startsWith('%PDF-1.4'), isTrue);
+      expect(pdfString.contains('%%EOF'), isTrue);
+      expect(pdfString.contains('/Type /Catalog'), isTrue);
+      expect(pdfString.contains('/Type /Pages'), isTrue);
+      expect(pdfString.contains('/Type /Page'), isTrue);
+      expect(pdfString.contains('Sharma Dental Clinic'), isTrue);
+      expect(pdfString.contains('priya@sharmadental.com'), isTrue);
+      expect(pdfString.contains('Delhi'), isTrue);
+    });
+
+    test('Handles multi-page pagination for large lead counts cleanly', () {
+      final leads = List.generate(
+        25,
+        (i) => Lead(
+          id: 'lead-$i',
+          name: 'Lead $i',
+          businessName: 'Business Corp $i',
+          email: 'contact$i@business.com',
+          phone: '+1 555 010$i',
+          platform: 'LinkedIn',
+          profileUrl: 'https://linkedin.com/in/lead-$i',
+          location: 'New York, USA',
+          niche: 'SaaS Founders',
+          extractedAt: DateTime.now(),
+        ),
+      );
+
+      final pdfBytes = PdfExportService.instance.generateLeadReportPdf(
+        leads,
+        niche: 'SaaS Founders',
+      );
+
+      final pdfString = String.fromCharCodes(pdfBytes);
+      expect(pdfString.startsWith('%PDF-1.4'), isTrue);
+      expect(pdfString.contains('%%EOF'), isTrue);
+      expect(pdfString.contains('/Count 3'), isTrue); // 25 leads across 3 pages (9 + 10 + 6)
+      expect(pdfString.contains('Page 1 of 3'), isTrue);
+      expect(pdfString.contains('Page 2 of 3'), isTrue);
+      expect(pdfString.contains('Page 3 of 3'), isTrue);
     });
   });
 
@@ -107,6 +173,44 @@ void main() {
       expect(results[0].snippet, contains('9870092963'));
       expect(results[0].sourceEngine, 'Bing');
     });
+
+    test('Decodes live Bing redirect tracking URLs with &amp; and base64 u parameter', () {
+      // Live Bing HTML snippet with tracking URL
+      const bingHtmlWithTracking = '''
+<!DOCTYPE html>
+<html>
+<body>
+  <li class="b_algo">
+    <h2>
+      <a href="https://www.bing.com/ck/a?!&amp;&amp;p=123&amp;u=a1aHR0cHM6Ly9saW5rZWRpbi5jb20vaW4vc2FtcGxl&amp;ntb=1">Sample Executive - Founder - Fintech | LinkedIn</a>
+    </h2>
+    <div class="b_caption">
+      <p>Bangalore, Karnataka, India. Founder at Tech Solutions. Contact: founder@gmail.com</p>
+    </div>
+  </li>
+</body>
+</html>
+''';
+
+      final results = DuckDuckGoSearchService.instance.parseBingResults(bingHtmlWithTracking);
+      expect(results.length, 1);
+      expect(results[0].url, 'https://linkedin.com/in/sample');
+      expect(results[0].url, isNot(contains('bing.com')));
+    });
+
+    test('cleanRedirectUrl decodes relative and absolute tracking URLs cleanly', () {
+      const bingRedirect = 'https://www.bing.com/ck/a?!&amp;&amp;p=abc&amp;u=a1aHR0cHM6Ly9wbGFpZC5jb20vcmVzb3VyY2VzLw&amp;ntb=1';
+      expect(
+        DuckDuckGoSearchService.instance.cleanRedirectUrl(bingRedirect),
+        'https://plaid.com/resources/',
+      );
+
+      const yahooRedirect = 'https://r.search.yahoo.com/_ylt=123/RU=https%3a%2f%2finstagram.com%2fdentist/RK=2/RS=456';
+      expect(
+        DuckDuckGoSearchService.instance.cleanRedirectUrl(yahooRedirect),
+        'https://instagram.com/dentist',
+      );
+    });
   });
 
   group('DuckDuckGo Search & Anomaly Parser Tests', () {
@@ -155,7 +259,7 @@ void main() {
   });
 
   group('Lead Discovery Query Matrix & Fallback Tests', () {
-    test('Generates natural unquoted search queries', () {
+    test('Generates high-accuracy exact-phrase quoted search queries', () {
       const config = LeadDiscoveryConfig(
         niche: 'Gaming',
         location: 'India',
@@ -167,13 +271,13 @@ void main() {
       final queries = LeadDiscoveryService.instance.buildQueries(config);
       expect(queries, isNotEmpty);
 
-      // Check natural queries exist without rigid triple quotes
+      // Check exact quoted phrase queries exist
       expect(
-        queries.any((q) => q.contains('site:instagram.com Gaming India @gmail.com')),
+        queries.any((q) => q.contains('site:instagram.com "Gaming" "India" "@gmail.com"')),
         isTrue,
       );
       expect(
-        queries.any((q) => q.contains('site:linkedin.com/in/ Gaming India')),
+        queries.any((q) => q.contains('site:linkedin.com/in/ "Gaming" "India"')),
         isTrue,
       );
     });
@@ -197,16 +301,19 @@ void main() {
       expect(fallbackLeads.first.profileUrl, startsWith('https://instagram.com/'));
     });
 
+    test('LeadDiscoveryConfig defaults to unlimited leads (maxResults is null)', () {
+      const config = LeadDiscoveryConfig(niche: 'Real Estate');
+      expect(config.maxResults, isNull);
+    });
+
     test('Generates distinct leads across different pagination pages', () {
       const page1Config = LeadDiscoveryConfig(
         niche: 'Real Estate',
         page: 1,
-        maxResults: 50,
       );
       const page2Config = LeadDiscoveryConfig(
         niche: 'Real Estate',
         page: 2,
-        maxResults: 50,
       );
 
       final page1Leads = LeadDiscoveryService.instance.generateFallbackLeads(page1Config);
@@ -214,6 +321,36 @@ void main() {
 
       expect(page1Leads.first.email, isNot(equals(page2Leads.first.email)));
       expect(page1Leads.first.profileUrl, isNot(equals(page2Leads.first.profileUrl)));
+    });
+
+    test('Filters out random 3rd-party article URLs when social platform is requested', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [
+        const SearchResultItem(
+          title: 'Top 10 Digital Marketing Agencies in India - DigitalWorld Blog',
+          url: 'https://digitalworld.in/top-10-marketing-agencies',
+          snippet: 'Check out the top marketing agencies. Contact us at info@digitalworld.in or 9876543210',
+          sourceEngine: 'Yahoo',
+        ),
+        const SearchResultItem(
+          title: 'Rahul Sharma (@rahul_digital) • Instagram',
+          url: 'https://www.instagram.com/rahul_digital/',
+          snippet: 'Digital Marketing Expert in Mumbai. Email: rahul@gmail.com | WhatsApp: +919820012345',
+          sourceEngine: 'Yahoo',
+        ),
+      ];
+
+      const config = LeadDiscoveryConfig(
+        niche: 'Digital Marketing',
+        platforms: ['Instagram'],
+      );
+
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads.length, 1);
+      expect(leads.first.platform, 'Instagram');
+      expect(leads.first.profileUrl, 'https://instagram.com/rahul_digital/');
+      expect(leads.first.email, 'rahul@gmail.com');
     });
   });
 }

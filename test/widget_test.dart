@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mastui/main.dart';
 import 'package:mastui/models/lead_model.dart';
 import 'package:mastui/screens/home_screen.dart';
+import 'package:mastui/services/lead_discovery_service.dart';
+import 'package:mastui/services/lead_storage_service.dart';
 import 'package:mastui/widgets/lead_card.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('GetLead app mounts and displays search controls cleanly',
@@ -14,13 +18,12 @@ void main() {
     // Verify main screen elements
     expect(find.byType(MastUiApp), findsOneWidget);
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.text('GetLead'), findsOneWidget);
+    expect(find.textContaining('GetLead'), findsOneWidget);
     expect(find.text('Generate Leads'), findsOneWidget);
+    expect(find.text('Export'), findsOneWidget);
 
-    // Verify more_vert menu in top AppBar
+    // Verify more_vert menu and filter button in top AppBar
     expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
-
-    // Verify adjacent filter button at bottom
     expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
 
     // Tap filter button to open bottom sheet
@@ -38,6 +41,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Filters'), findsNothing);
+
+    // Tap Export button when empty -> shows toast/snack
+    await tester.tap(find.text('Export'));
+    await tester.pumpAndSettle();
+    expect(find.text('No leads to export.'), findsOneWidget);
   });
 
   testWidgets('LeadCard renders without overflow on narrow width and respects clean UI',
@@ -89,16 +97,17 @@ void main() {
     // Close/delete button is present
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
-    // Email, phone and website are properly shown
+    // Email, phone, website, and 1-click WhatsApp are properly shown
     expect(find.text('contact@sdcbusiness.com'), findsOneWidget);
     expect(find.text('+919876543210'), findsOneWidget);
+    expect(find.text('WhatsApp'), findsOneWidget);
     expect(find.text('https://sdcbusiness.com'), findsOneWidget);
     expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget); // website open iconbutton
 
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('LeadCard cleanly hides missing email and phone without affecting other fields',
+  testWidgets('LeadCard cleanly hides missing email, phone, and WhatsApp when not available',
       (WidgetTester tester) async {
     final minimalLead = Lead(
       id: 'test-2',
@@ -121,7 +130,75 @@ void main() {
     expect(find.text('LinkedIn'), findsOneWidget);
     expect(find.byIcon(Icons.mail_outline_rounded), findsNothing);
     expect(find.byIcon(Icons.phone_outlined), findsNothing);
+    expect(find.text('WhatsApp'), findsNothing);
     expect(find.byIcon(Icons.language_rounded), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Fresh search automatically clears previous leads and shows discovery state',
+      (WidgetTester tester) async {
+    final streamController = StreamController<Lead>();
+    LeadDiscoveryService.instance.mockStreamHandler = (config) => streamController.stream;
+    HomeScreen.enablePulseAnimation = false;
+    addTearDown(() {
+      HomeScreen.enablePulseAnimation = true;
+      streamController.close();
+      LeadDiscoveryService.instance.mockStreamHandler = null;
+    });
+
+    // Initialize SharedPreferences mock platform channel
+    SharedPreferences.setMockInitialValues({});
+
+    final oldLead = Lead(
+      id: 'old-real-estate-1',
+      name: 'Old Real Estate Lead',
+      platform: 'Instagram',
+      profileUrl: 'https://instagram.com/realestate',
+      niche: 'Real Estate',
+      extractedAt: DateTime.now(),
+    );
+    await LeadStorageService.instance.saveLeads([oldLead]);
+
+    await tester.pumpWidget(const MastUiApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Old Real Estate Lead'), findsOneWidget);
+    expect(find.text('1 leads'), findsOneWidget);
+
+    final searchField = find.byType(TextField).first;
+    await tester.enterText(searchField, 'Dentists');
+    await tester.pump();
+
+    // Tap "Generate Leads" button
+    await tester.tap(find.text('Generate Leads'));
+    await tester.pump();
+
+    // 1. Verify old lead is AUTOMATICALLY CLEARED from view
+    expect(find.text('Old Real Estate Lead'), findsNothing);
+    expect(find.textContaining('Searching leads for "Dentists"'), findsOneWidget);
+
+    // 2. Emit a new Dentist lead into the active stream
+    streamController.add(
+      Lead(
+        id: 'new-dentist-1',
+        name: 'Dr. Smile Dental Clinic',
+        platform: 'Instagram',
+        profileUrl: 'https://instagram.com/drsmile',
+        niche: 'Dentists',
+        extractedAt: DateTime.now(),
+      ),
+    );
+    await tester.pump();
+
+    // 3. Verify the new lead appears
+    expect(find.text('Dr. Smile Dental Clinic'), findsOneWidget);
+
+    // 4. Verify old lead is NEVER mixed with the new category
+    expect(find.text('Old Real Estate Lead'), findsNothing);
+
+    // Complete stream and settle
+    await streamController.close();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
   });
 }

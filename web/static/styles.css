@@ -10,6 +10,10 @@
   --text: #111111;
   --text-secondary: #666666;
   --text-muted: #8a8a8a;
+  --primary-cta: #000000;
+  --primary-cta-hover: #222222;
+  --secondary-green: #10a37f;
+  --secondary-blue: #0066ff;
   --accent: #10a37f;
   --accent-hover: #0d8c6b;
   --radius-card: 18px;
@@ -74,13 +78,13 @@ h2 { font-size: 20px; margin: 40px 0 12px; font-weight: 600; letter-spacing: -0.
 .site-header nav a { color: var(--text-secondary); font-size: 14px; font-weight: 500; }
 
 .cta {
-  background: var(--accent);
+  background: var(--primary-cta);
   color: #fff !important;
   padding: 10px 18px;
   border-radius: var(--radius-button);
   font-weight: 600;
 }
-.cta:hover { background: var(--accent-hover); }
+.cta:hover { background: var(--primary-cta-hover); }
 .cta.big { display: inline-block; padding: 15px 28px; font-size: 16px; }
 
 .site-footer {

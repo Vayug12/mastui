@@ -7,6 +7,10 @@
   --text: #111111;
   --text-secondary: #666666;
   --text-muted: #8a8a8a;
+  --primary-cta: #000000;
+  --primary-cta-hover: #222222;
+  --secondary-green: #10a37f;
+  --secondary-blue: #0066ff;
   --accent: #10a37f;
   --accent-hover: #0d8c6b;
 }
@@ -118,8 +122,8 @@ button {
 }
 button:disabled { opacity: 0.45; cursor: default; }
 
-.primary { background: var(--accent); color: #fff; font-weight: 600; flex: 1; }
-.primary:not(:disabled):hover { background: var(--accent-hover); }
+.primary { background: var(--primary-cta); color: #fff; font-weight: 600; flex: 1; }
+.primary:not(:disabled):hover { background: var(--primary-cta-hover); }
 
 .secondary { background: var(--bg-subtle); color: var(--text); border-color: var(--border); }
 .secondary:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }

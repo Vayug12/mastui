@@ -12,6 +12,9 @@ class Lead {
   final String? niche;
   final String? bioSnippet;
   final DateTime extractedAt;
+  final bool isWorkEmail;
+  final String? emailStatus;
+  final List<String>? alternativeEmails;
 
   const Lead({
     required this.id,
@@ -26,6 +29,9 @@ class Lead {
     this.niche,
     this.bioSnippet,
     required this.extractedAt,
+    this.isWorkEmail = false,
+    this.emailStatus,
+    this.alternativeEmails,
   });
 
   bool get hasContactInfo =>
@@ -50,6 +56,9 @@ class Lead {
         'niche': niche,
         'bioSnippet': bioSnippet,
         'extractedAt': extractedAt.toIso8601String(),
+        'isWorkEmail': isWorkEmail,
+        'emailStatus': emailStatus,
+        'alternativeEmails': alternativeEmails,
       };
 
   factory Lead.fromJson(Map<String, dynamic> json) {
@@ -68,6 +77,11 @@ class Lead {
       extractedAt: json['extractedAt'] != null
           ? DateTime.tryParse(json['extractedAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      isWorkEmail: json['isWorkEmail'] as bool? ?? false,
+      emailStatus: json['emailStatus'] as String?,
+      alternativeEmails: (json['alternativeEmails'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
     );
   }
 
@@ -119,6 +133,9 @@ class Lead {
     String? niche,
     String? bioSnippet,
     DateTime? extractedAt,
+    bool? isWorkEmail,
+    String? emailStatus,
+    List<String>? alternativeEmails,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -133,6 +150,9 @@ class Lead {
       niche: niche ?? this.niche,
       bioSnippet: bioSnippet ?? this.bioSnippet,
       extractedAt: extractedAt ?? this.extractedAt,
+      isWorkEmail: isWorkEmail ?? this.isWorkEmail,
+      emailStatus: emailStatus ?? this.emailStatus,
+      alternativeEmails: alternativeEmails ?? this.alternativeEmails,
     );
   }
 

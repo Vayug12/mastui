@@ -82,13 +82,32 @@ Disabled
 
 ---
 
-## Accent
+## Primary Action / CTA
 
-Primary Accent
+Primary CTA (ChatGPT signature filled button)
+#000000 (Pure Black)
+
+On Primary CTA
+#FFFFFF (Pure White)
+
+Primary Hover / Pressed
+#222222
+
+---
+
+## Secondary Accents
+
+Secondary Green (OpenAI Iconic Teal)
 #10A37F
 
-Hover
+Secondary Green Hover
 #0D8C6B
+
+Secondary Blue (Interactive / Accent)
+#0066FF
+
+Secondary Blue Hover
+#0052CC
 
 Success
 #10A37F
@@ -99,7 +118,7 @@ Warning
 Danger
 #E5484D
 
-Never use multiple accent colors in one screen.
+Never use multiple dominant accent colors in one screen. Use pure black for the primary CTA, and green/blue for secondary actions and subtle status badges.
 
 ---
 
@@ -211,13 +230,13 @@ Never invent random spacing values.
 
 # Buttons
 
-Primary
+Primary CTA
 
 Filled
 
-Green accent
+Pure Black (#000000)
 
-White text
+Pure White text (#FFFFFF)
 
 Height
 
@@ -227,19 +246,33 @@ Radius
 
 14px
 
-Secondary
+Secondary Button (Outlined / Surface)
 
-White background
+White or subtle background (#F7F7F8)
 
-Gray border
+Subtle gray border (#ECECEC)
 
-Dark text
+Dark text (#111111)
+
+Secondary Action / Accent Button
+
+Green (#10A37F) or Blue (#0066FF) outlined / tonal
+
+Soft tint background with crisp accent text / icon
+
+Height
+
+52px (or 48px compact)
+
+Radius
+
+14px
 
 Text Button
 
 No border
 
-Accent text
+Accent text (Green #10A37F or Blue #0066FF or Muted #666666)
 
 Never use gradients.
 
@@ -413,6 +446,32 @@ No optional descriptions. Minimal text only.
 
 ---
 
+# Responsiveness & Scroll Safety
+
+Every screen, modal dialog, and bottom sheet must be 100% responsive and scroll-safe across all screen dimensions, landscape orientations, and system display zoom / font size settings.
+
+## Rules:
+
+1. **Never use naked Columns with fixed height or Spacer() without scroll protection:**
+   - Always wrap screen bodies with `LayoutBuilder` + `SingleChildScrollView` + `ConstrainedBox(minHeight: constraints.maxHeight)` + `IntrinsicHeight` when elements need to stretch or pin actions to the bottom.
+   - This ensures content expands naturally on large screens while smoothly scrolling on smaller phones (5–5.5 inches), split-screen, or landscape mode without `RenderFlex overflowed` errors.
+
+2. **Modal Bottom Sheets must be Constrained & Scrollable:**
+   - Always pass `isScrollControlled: true` to `showModalBottomSheet`.
+   - Constrain maximum height via `ConstrainedBox(constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88))`.
+   - Wrap dynamic/scrollable items in `Flexible(child: SingleChildScrollView(physics: const BouncingScrollPhysics(), ...))`.
+   - Keep primary action buttons pinned at the bottom with a subtle divider so they remain immediately accessible.
+
+3. **Dialogs & Confirmation Prompts:**
+   - Dynamic or variable text in dialogs must be scroll-safe.
+   - Maintain `insetPadding` (e.g. horizontal 24px) so dialogs never clip against viewport edges.
+
+4. **Accessibility Font Scaling:**
+   - Support system font scaling (>1.2x). Buttons, badges, and titles should use appropriate line wrapping or `TextOverflow.ellipsis` where single-line constraint is essential.
+   - Never hardcode fixed viewport assumptions (e.g., assuming height is always >= 800px).
+
+---
+
 # DO
 
 ✓ Minimal
@@ -432,6 +491,8 @@ No optional descriptions. Minimal text only.
 ✓ Linear style
 
 ✓ Professional
+
+✓ 100% Scroll-safe & responsive on all screen sizes
 
 ---
 
@@ -457,6 +518,10 @@ No optional descriptions. Minimal text only.
 
 ✗ Crowded layouts
 
+✗ Naked Columns with Spacer() without scroll protection
+
+✗ Fixed height assumptions causing RenderFlex overflows
+
 ✗ Helper text under inputs
 
 ✗ Multiple icons saying same thing
@@ -478,8 +543,10 @@ Whenever creating a new screen:
 - Keep interfaces minimal.
 - Optimize for readability first.
 - Every screen should look like it belongs in the same product.
+- Always make screens and bottom sheets 100% responsive and scroll-safe (using LayoutBuilder + SingleChildScrollView + ConstrainedBox / Flexible) to guarantee zero RenderFlex overflow bugs on small devices, landscape, or high font-scaling modes.
 - If unsure, choose the simpler option.
 - No helper text under any input or label.
 - Use minimum text. Say more with less.
 - One icon per element. No fancy multiple icons.
-- The result should resemble a premium Apple-quality productivity app with the calm visual language of ChatGPT.
+- Primary CTA is always pure black (#000000) with white text. Secondary CTAs and accents use OpenAI green (#10A37F) and blue (#0066FF).
+- The result should resemble a premium Apple-quality productivity app with the calm, high-contrast visual language of ChatGPT.
