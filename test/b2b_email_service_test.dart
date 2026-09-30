@@ -57,11 +57,11 @@ void main() {
       );
       expect(d2, 'razorpay.com');
 
-      // 3. Infers domain from business name when neither is present
+      // 3. Returns null when neither website nor bio domain is available (never guesses fake domains)
       final d3 = service.extractDomain(
         businessName: 'Ola Cabs Technologies Pvt Ltd',
       );
-      expect(d3, 'olacabs.com');
+      expect(d3, isNull);
     });
 
     test('Filters out generic social media and search engine domains', () {

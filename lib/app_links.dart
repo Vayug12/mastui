@@ -5,8 +5,7 @@
 /// and the store review team opens them. Host them anywhere (GitHub Pages,
 /// Cloudflare Pages, Notion public page) and paste the URLs here.
 abstract final class AppLinks {
-  // TODO(mastui): Terms page still has to be created and hosted.
-  static const terms = 'https://mastui.app/terms';
+  static const terms = 'https://sites.google.com/view/mastuiprivacypolicy/home';
 
   /// Source text lives in docs/privacy-policy.md — update the Google Site from
   /// it whenever data handling changes.

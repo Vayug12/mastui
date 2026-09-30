@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import '../models/lead_model.dart';
-import 'b2b_email_service.dart';
+import 'cloudflare_ai_service.dart';
 import 'duckduckgo_search_service.dart';
 
 /// Configuration for lead discovery.
@@ -39,14 +39,51 @@ class LeadDiscoveryService {
   Stream<Lead> Function(LeadDiscoveryConfig config)? mockStreamHandler;
 
   static final RegExp _emailRegex = RegExp(
-    r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+    r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b',
     caseSensitive: false,
   );
 
+  /// Only match genuine obfuscated emails with explicit bracket notation (e.g. "user [at] domain [dot] com").
+  /// Explicitly excludes plain English prepositions like bare "at" or bare "dot".
   static final RegExp _obfuscatedEmailRegex = RegExp(
-    r'([a-zA-Z0-9._%+-]+)\s*(?:@|\[at\]|\(at\)|\bat\b)\s*([a-zA-Z0-9.-]+)\s*(?:\.|\[dot\]|\(dot\)|\bdot\b)\s*([a-zA-Z]{2,})',
+    r'\b([a-zA-Z0-9._%+-]+)\s*(?:\[at\]|\(at\)|\[@\])\s*([a-zA-Z0-9.-]+)\s*(?:\[dot\]|\(dot\)|\.)\s*([a-zA-Z]{2,})\b',
     caseSensitive: false,
   );
+
+  static const Set<String> _blacklistedEmailDomains = {
+    'example.com',
+    'example.org',
+    'example.net',
+    'domain.com',
+    'test.com',
+    'sample.com',
+    'placeholder.com',
+    'yoursite.com',
+    'yourcompany.com',
+    'email.com',
+    'sentry.io',
+    'github.com',
+    'wixpress.com',
+    'squarespace.com',
+    'instagram.com',
+    'facebook.com',
+    'tiktok.com',
+    'linkedin.com',
+    'twitter.com',
+    'x.com',
+    'youtube.com',
+  };
+
+  static const Set<String> _blacklistedEmailPrefixes = {
+    'noreply',
+    'no-reply',
+    'donotreply',
+    'abuse',
+    'security',
+    'privacy',
+    'mailer-daemon',
+    'postmaster',
+  };
 
   static final RegExp _phoneRegex = RegExp(
     r'(?:\+?91[\s-]?)?(?:[6-9]\d{9}|[6-9]\d{4}[\s-]?\d{5}|[6-9]\d{2}[\s-]?\d{3}[\s-]?\d{4}|\(?0\d{2,4}\)?[\s-]?\d{6,8}|\+?\d{1,3}[\s-]?(?:\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{4})',
@@ -56,6 +93,7 @@ class LeadDiscoveryService {
     r'(?:https?:\/\/|www\.)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?',
     caseSensitive: false,
   );
+
 
   /// Generates high-accuracy, exact-phrase search queries for targeted platforms.
   List<String> buildQueries(LeadDiscoveryConfig config) {
@@ -80,26 +118,62 @@ class LeadDiscoveryService {
       final nicheTerm = '"$cleanNiche"';
       final locTerm = cleanLoc.isNotEmpty ? '"$cleanLoc"' : '';
 
-      // 1. Exact email footprint queries
+      if (platform == 'LinkedIn') {
+        // High-value Decision Maker & Founder focused dorks for LinkedIn
+        if (locTerm.isNotEmpty) {
+          queries.add('$domain $nicheTerm "Founder" $locTerm');
+          queries.add('$domain $nicheTerm "CEO" $locTerm');
+          queries.add('$domain $cleanNiche Founder $cleanLoc');
+          queries.add('$domain $cleanNiche CEO $cleanLoc');
+          queries.add('$domain $cleanNiche Owner $cleanLoc');
+          queries.add('site:linkedin.com in $cleanNiche $cleanLoc Founder');
+          if (config.extractEmails) {
+            queries.add('$domain $nicheTerm $locTerm "@gmail.com"');
+            queries.add('site:linkedin.com in $cleanNiche $cleanLoc @gmail.com');
+          }
+          queries.add('$domain $nicheTerm $locTerm');
+        } else {
+          queries.add('$domain $nicheTerm "Founder"');
+          queries.add('$domain $nicheTerm "CEO"');
+          queries.add('$domain $cleanNiche Founder');
+          queries.add('$domain $cleanNiche CEO');
+          queries.add('$domain $cleanNiche Owner');
+          queries.add('site:linkedin.com in $cleanNiche Founder');
+          if (config.extractEmails) {
+            queries.add('$domain $nicheTerm "@gmail.com"');
+            queries.add('site:linkedin.com in $cleanNiche @gmail.com');
+          }
+          queries.add('$domain $nicheTerm');
+        }
+        continue;
+      }
+
+      // 1. Email footprint queries (exact dork + natural dork)
       if (config.extractEmails) {
         if (locTerm.isNotEmpty) {
           queries.add('$domain $nicheTerm $locTerm "@gmail.com"');
+          queries.add('$domain $cleanNiche $cleanLoc @gmail.com');
           queries.add('$domain $nicheTerm $locTerm "email"');
         } else {
           queries.add('$domain $nicheTerm "@gmail.com"');
+          queries.add('$domain $cleanNiche @gmail.com');
           queries.add('$domain $nicheTerm "email"');
         }
       }
 
-      // 2. Exact phone & WhatsApp footprint queries
+      // 2. Phone & WhatsApp footprint queries (exact dork + natural dork)
       if (config.extractPhones) {
         if (locTerm.isNotEmpty) {
           queries.add('$domain $nicheTerm $locTerm "WhatsApp"');
+          queries.add('$domain $cleanNiche $cleanLoc WhatsApp');
           queries.add('$domain $nicheTerm $locTerm "phone"');
+          queries.add('$domain $cleanNiche $cleanLoc phone');
           queries.add('$domain $nicheTerm $locTerm "+91"');
         } else {
           queries.add('$domain $nicheTerm "WhatsApp"');
+          queries.add('$domain $cleanNiche WhatsApp');
           queries.add('$domain $nicheTerm "phone"');
+          queries.add('$domain $cleanNiche phone');
           queries.add('$domain $nicheTerm "contact"');
         }
       }
@@ -107,8 +181,10 @@ class LeadDiscoveryService {
       // 3. Platform presence query
       if (locTerm.isNotEmpty) {
         queries.add('$domain $nicheTerm $locTerm');
+        queries.add('$domain $cleanNiche $cleanLoc');
       } else {
         queries.add('$domain $nicheTerm');
+        queries.add('$domain $cleanNiche');
       }
     }
 
@@ -126,45 +202,65 @@ class LeadDiscoveryService {
     final seenKeys = <String>{};
     var totalYielded = 0;
 
-    for (final query in queries) {
+    // Safe pool: 2 concurrent queries per batch with human-like stagger jitter
+    // to prevent search engine rate limits or IP bot blocks.
+    const batchSize = 2;
+    final random = Random();
+
+    for (var i = 0; i < queries.length; i += batchSize) {
       if (config.maxResults != null && totalYielded >= config.maxResults!) break;
 
-      final results = await DuckDuckGoSearchService.instance.search(query, page: config.page);
+      final end = (i + batchSize < queries.length) ? i + batchSize : queries.length;
+      final batch = queries.sublist(i, end);
 
-      for (final item in results) {
-        if (config.maxResults != null && totalYielded >= config.maxResults!) break;
+      // Distribute queries across alternating engines (Yahoo <-> Bing) with slight stagger
+      final batchFutures = <Future<List<SearchResultItem>>>[];
+      for (var idx = 0; idx < batch.length; idx++) {
+        final q = batch[idx];
+        final engine = (idx % 2 == 0) ? 'Yahoo' : 'Bing';
+        final staggerMs = idx * (200 + random.nextInt(150));
 
-        final lead = await _extractLeadFromItem(item, config);
-        if (lead == null) continue;
-
-        // Deduplication key
-        final key = (lead.email?.isNotEmpty == true)
-            ? lead.email!.toLowerCase()
-            : (lead.phone?.isNotEmpty == true)
-                ? lead.phone!
-                : lead.profileUrl.toLowerCase();
-
-        if (seenKeys.contains(key)) continue;
-        seenKeys.add(key);
-
-        totalYielded++;
-        yield lead;
+        batchFutures.add(
+          Future.delayed(
+            Duration(milliseconds: staggerMs),
+            () => DuckDuckGoSearchService.instance.search(
+              q,
+              page: config.page,
+              preferredEngine: engine,
+            ),
+          ),
+        );
       }
 
-      // Polite crawling delay
-      if (crawlDelay > Duration.zero) {
-        await Future<void>.delayed(crawlDelay);
-      }
-    }
+      final batchResults = await Future.wait(batchFutures);
 
-    // Safety Net Fallback: If network queries returned 0 results, generate realistic contextual leads
-    if (totalYielded == 0) {
-      final fallbackLeads = generateFallbackLeads(config);
-      for (final lead in fallbackLeads) {
-        if (config.maxResults != null && totalYielded >= config.maxResults!) break;
-        totalYielded++;
-        yield lead;
+      for (final results in batchResults) {
+        for (final item in results) {
+          if (config.maxResults != null && totalYielded >= config.maxResults!) break;
+
+          final lead = await _extractLeadFromItem(item, config);
+          if (lead == null) continue;
+
+          // Deduplication key
+          final key = (lead.email?.isNotEmpty == true)
+              ? lead.email!.toLowerCase()
+              : (lead.phone?.isNotEmpty == true)
+                  ? lead.phone!
+                  : lead.profileUrl.toLowerCase();
+
+          if (seenKeys.contains(key)) continue;
+          seenKeys.add(key);
+
+          totalYielded++;
+          yield lead;
+        }
       }
+
+      // Polite crawling delay between batches (250-400ms human jitter)
+      final delay = crawlDelay > Duration.zero
+          ? crawlDelay
+          : Duration(milliseconds: 250 + random.nextInt(150));
+      await Future<void>.delayed(delay);
     }
   }
 
@@ -217,7 +313,12 @@ class LeadDiscoveryService {
   String _normalizeProfileUrl(String url, String platform) {
     try {
       final uri = Uri.parse(url);
-      var host = uri.host.replaceFirst('www.', '').replaceFirst('in.', '').replaceFirst('mobile.', '').replaceFirst('m.', '');
+      var host = uri.host.toLowerCase();
+      for (final prefix in ['www.', 'mobile.', 'm.', 'in.']) {
+        if (host.startsWith(prefix)) {
+          host = host.substring(prefix.length);
+        }
+      }
       if (host.isEmpty) host = '${platform.toLowerCase()}.com';
       final cleanUri = Uri(
         scheme: 'https',
@@ -243,12 +344,26 @@ class LeadDiscoveryService {
     final urlLower = item.url.toLowerCase();
     if (urlLower.contains('instagram.com')) {
       platform = 'Instagram';
-    } else if (urlLower.contains('linkedin.com/in/') || urlLower.contains('linkedin.com/company/')) {
+    } else if (urlLower.contains('linkedin.com/in/') || urlLower.contains('linkedin.com/company/') || urlLower.contains('linkedin.com/pub/')) {
       platform = 'LinkedIn';
     } else if (urlLower.contains('facebook.com')) {
       platform = 'Facebook';
     } else if (urlLower.contains('x.com') || urlLower.contains('twitter.com')) {
       platform = 'X';
+    }
+
+    // Secondary platform detection if URL was a search redirect (e.g. Yahoo / Bing redirect)
+    if (platform == 'Web') {
+      final combinedLower = combinedText.toLowerCase();
+      if (urlLower.contains('instagram') || combinedLower.contains('instagram.com') || item.title.contains('Instagram')) {
+        platform = 'Instagram';
+      } else if (urlLower.contains('linkedin') || combinedLower.contains('linkedin.com') || item.title.contains('LinkedIn')) {
+        platform = 'LinkedIn';
+      } else if (urlLower.contains('facebook') || combinedLower.contains('facebook.com') || item.title.contains('Facebook')) {
+        platform = 'Facebook';
+      } else if (urlLower.contains('twitter') || urlLower.contains('x.com') || combinedLower.contains('twitter.com') || item.title.contains('Twitter') || item.title.contains('/ X')) {
+        platform = 'X';
+      }
     }
 
     // 2. Platform Filtering: If user searched for specific platforms, reject random third-party blog/article links
@@ -264,45 +379,86 @@ class LeadDiscoveryService {
       return null;
     }
 
+    // 3b. Strict Location Filter: If user specified a location, discard leads not matching it
+    if (config.location.trim().isNotEmpty && !_matchesLocation(item, config.location)) {
+      return null;
+    }
+
     // 4. Extract Email (standard or obfuscated)
     String? email = _extractEmail(combinedText);
 
     // 5. Extract Phone
     String? phone = _extractPhone(combinedText);
 
-    // 6. Parse Title & Business Name
-    final parsedNames = _parseNameAndBusiness(item.title, platform);
+    // 6. Parse Title & Business Name (Heuristic first)
+    var parsedNames = _parseNameAndBusiness(item.title, platform);
+    var website = _extractWebsite(combinedText, item.url, platform);
 
-    // 7. Extract Website
-    final website = _extractWebsite(combinedText, item.url, platform);
-
-    final cleanProfileUrl = _normalizeProfileUrl(item.url, platform);
-
-    bool isWorkEmail = false;
-    String? emailStatus = email != null ? 'public' : null;
-    List<String>? alternativeEmails;
-
-    // 8. Apollo-style B2B Work Email Intelligence:
-    // If no public email is present in the snippet, predict and verify corporate work email
-    if (email == null && config.extractEmails && parsedNames.$1.isNotEmpty && parsedNames.$1 != 'Business Lead') {
+    // AI Entity Extraction: Use LLM for LinkedIn & complex profile leads to guarantee accurate name & business separation
+    if (platform == 'LinkedIn') {
       try {
-        final b2bResult = await B2bEmailService.instance.predictAndVerifyWorkEmail(
-          fullName: parsedNames.$1,
-          businessName: parsedNames.$2,
-          website: website,
-          bioSnippet: item.snippet,
+        final aiEntity = await CloudflareAiService.instance.extractLeadEntity(
+          rawTitle: item.title,
+          rawSnippet: item.snippet,
+          platform: platform,
         );
 
-        if (b2bResult != null) {
-          email = b2bResult.primaryEmail;
-          isWorkEmail = true;
-          emailStatus = b2bResult.status;
-          alternativeEmails = b2bResult.alternativePatterns;
+        if (aiEntity != null && aiEntity.isAuthenticLead) {
+          parsedNames = (
+            aiEntity.personName.isNotEmpty ? aiEntity.personName : parsedNames.$1,
+            aiEntity.businessName ?? parsedNames.$2,
+          );
+          if (website == null && aiEntity.domain != null && aiEntity.domain!.isNotEmpty) {
+            website = 'https://${aiEntity.domain}';
+          }
         }
       } catch (_) {
-        // Fallback gracefully on any unexpected network error
+        // Graceful fallback to heuristic parse
       }
     }
+
+    var cleanProfileUrl = _normalizeProfileUrl(item.url, platform);
+    if ((cleanProfileUrl.contains('yahoo.com') || cleanProfileUrl.contains('bing.com')) && platform != 'Web') {
+      final handle = _extractHandle(item.title, item.snippet);
+      if (handle != null && handle.isNotEmpty) {
+        if (platform == 'Instagram') {
+          cleanProfileUrl = 'https://instagram.com/$handle/';
+        } else if (platform == 'LinkedIn') {
+          cleanProfileUrl = 'https://linkedin.com/in/$handle';
+        } else if (platform == 'X') {
+          cleanProfileUrl = 'https://x.com/$handle';
+        } else if (platform == 'Facebook') {
+          cleanProfileUrl = 'https://facebook.com/$handle';
+        }
+      }
+    }
+
+    // Hybrid Architecture Step 2: LLM Contact Verification
+    // Verifies candidate email & phone against the actual snippet context to eliminate
+    // false positives, sentence misreads, or platform boilerplate.
+    if (email != null || phone != null) {
+      try {
+        final aiVerified = await CloudflareAiService.instance.verifyContactDetails(
+          leadName: parsedNames.$1,
+          businessName: parsedNames.$2,
+          snippet: item.snippet,
+          candidateEmail: email,
+          candidatePhone: phone,
+        );
+
+        if (aiVerified != null) {
+          email = aiVerified.isEmailValid ? (aiVerified.verifiedEmail ?? email) : null;
+          phone = aiVerified.isPhoneValid ? (aiVerified.verifiedPhone ?? phone) : null;
+        }
+      } catch (_) {
+        // Graceful fallback to strict heuristics if AI request times out or is unreachable
+      }
+    }
+
+    bool isWorkEmail = false;
+    String? emailStatus = email != null ? 'verified' : null;
+    List<String>? alternativeEmails;
+
 
     // Filter rules:
     // If strict email only is requested
@@ -371,12 +527,75 @@ class LeadDiscoveryService {
     return null;
   }
 
+  bool _isAuthenticEmail(String email) {
+    final lower = email.trim().toLowerCase();
+    if (!lower.contains('@')) return false;
+
+    // Reject static file extensions misidentified as emails
+    if (lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.svg') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.css') ||
+        lower.endsWith('.js')) {
+      return false;
+    }
+
+    final parts = lower.split('@');
+    if (parts.length != 2) return false;
+    final user = parts[0].trim();
+    final domain = parts[1].trim();
+
+    if (user.length < 2 || domain.length < 4 || !domain.contains('.')) {
+      return false;
+    }
+
+    if (_blacklistedEmailDomains.contains(domain)) {
+      return false;
+    }
+
+    if (_blacklistedEmailPrefixes.contains(user)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isAuthenticPhone(String rawPhone, String sourceText) {
+    final digitsOnly = rawPhone.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length < 10 || digitsOnly.length > 13) {
+      return false;
+    }
+
+    // Check if preceded by currency or price symbols in source text
+    final matchIndex = sourceText.indexOf(rawPhone);
+    if (matchIndex != -1) {
+      final startIndex = (matchIndex - 15).clamp(0, sourceText.length);
+      final preceding = sourceText.substring(startIndex, matchIndex).toLowerCase();
+      if (preceding.contains('₹') ||
+          preceding.contains('rs.') ||
+          preceding.contains('rs ') ||
+          preceding.contains('inr') ||
+          preceding.contains('price') ||
+          preceding.contains('pincode') ||
+          preceding.contains('pin code') ||
+          preceding.contains('pin:') ||
+          preceding.contains('zip')) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   String? _extractEmail(String text) {
     // Check standard email
     final match = _emailRegex.firstMatch(text);
     if (match != null) {
       final found = match.group(0)?.trim();
-      if (found != null && !found.endsWith('.png') && !found.endsWith('.jpg') && !found.endsWith('.webp')) {
+      if (found != null && _isAuthenticEmail(found)) {
         return found;
       }
     }
@@ -388,7 +607,10 @@ class LeadDiscoveryService {
       final domain = obMatch.group(2);
       final tld = obMatch.group(3);
       if (user != null && domain != null && tld != null) {
-        return '$user@$domain.$tld'.toLowerCase();
+        final constructed = '$user@$domain.$tld'.toLowerCase();
+        if (_isAuthenticEmail(constructed)) {
+          return constructed;
+        }
       }
     }
 
@@ -399,12 +621,13 @@ class LeadDiscoveryService {
     final match = _phoneRegex.firstMatch(text);
     if (match != null) {
       final rawPhone = match.group(0)?.replaceAll(RegExp(r'[^\d+]'), '');
-      if (rawPhone != null && rawPhone.length >= 10) {
+      if (rawPhone != null && _isAuthenticPhone(rawPhone, text)) {
         return rawPhone;
       }
     }
     return null;
   }
+
 
   String? _extractHandle(String title, String url) {
     final handleMatch = RegExp(r'@([a-zA-Z0-9._]+)').firstMatch(title);
@@ -420,91 +643,109 @@ class LeadDiscoveryService {
     return null;
   }
 
+  static final RegExp _jobRoleRegex = RegExp(
+    r'^(?:ceo|founder|co-founder|co founder|owner|director|managing director|md|president|vice president|vp|general manager|gm|head of [a-z\s]+|partner|principal|proprietor|chief [a-z\s]+ officer|c[a-z]o|manager|executive|consultant|developer|engineer|specialist|advisor|lead|freelancer|self employed|board member)\b',
+    caseSensitive: false,
+  );
+
   (String, String?) _parseNameAndBusiness(String title, String platform) {
     var cleanTitle = title
         .replaceAll(RegExp(r'\s*-\s*Instagram\s*.*', caseSensitive: false), '')
         .replaceAll(RegExp(r'\s*\|\s*LinkedIn\s*.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s*-\s*LinkedIn\s*.*', caseSensitive: false), '')
         .replaceAll(RegExp(r'\s*-\s*Facebook\s*.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s*-\s*X\s*.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s*-\s*Twitter\s*.*', caseSensitive: false), '')
         .trim();
 
     cleanTitle = cleanTitle.replaceAll(RegExp(r'\(@[a-zA-Z0-9._]+\)'), '').trim();
     cleanTitle = cleanTitle.replaceAll(RegExp(r'•.*'), '').trim();
 
-    final parts = cleanTitle.split(RegExp(r'\s*[-|–:]\s*'));
-    if (parts.length >= 2) {
-      final part0 = parts[0].trim();
-      final part1 = parts[1].trim();
+    final parts = cleanTitle
+        .split(RegExp(r'\s*[-|–:]\s*'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
 
-      return (part0, part1);
+    if (parts.isEmpty) {
+      return ('Business Lead', null);
     }
 
-    return (cleanTitle.isNotEmpty ? cleanTitle : 'Business Lead', null);
+    if (parts.length == 1) {
+      final single = parts[0];
+      return (single.isNotEmpty ? single : 'Business Lead', null);
+    }
+
+    String? detectedName;
+    String? detectedRole;
+    String? detectedBusiness;
+
+    // Check each part
+    for (var i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final isRole = _jobRoleRegex.hasMatch(part);
+
+      if (isRole) {
+        if (part.contains(RegExp(r'\s+(?:at|@)\s+', caseSensitive: false))) {
+          final atSplit = part.split(RegExp(r'\s+(?:at|@)\s+', caseSensitive: false));
+          detectedRole = atSplit[0].trim();
+          if (atSplit.length > 1 && detectedBusiness == null) {
+            detectedBusiness = atSplit[1].trim();
+          }
+        } else {
+          detectedRole ??= part;
+        }
+      } else {
+        if (detectedName == null) {
+          detectedName = part;
+        } else if (detectedBusiness == null) {
+          detectedBusiness = part;
+        }
+      }
+    }
+
+    final finalName = detectedName ?? (detectedBusiness ?? parts[0]);
+    var finalBusiness = detectedBusiness;
+
+    // Avoid setting businessName if it's identical to name or matches a pure job role
+    if (finalBusiness != null) {
+      if (finalBusiness.toLowerCase() == finalName.toLowerCase() ||
+          _jobRoleRegex.hasMatch(finalBusiness)) {
+        finalBusiness = null;
+      }
+    }
+
+    return (finalName.isNotEmpty ? finalName : 'Business Lead', finalBusiness);
   }
 
-  /// Synthesizes high-quality realistic fallback leads when web search is blocked or offline.
-  List<Lead> generateFallbackLeads(LeadDiscoveryConfig config) {
-    final niche = config.niche.trim();
-    final loc = config.location.trim().isNotEmpty ? config.location.trim() : 'India';
-    final platformList = config.platforms.isEmpty ? ['Instagram', 'LinkedIn', 'Facebook'] : config.platforms;
+  /// Validates whether the search result matches the requested location filter.
+  bool _matchesLocation(SearchResultItem item, String requestedLocation) {
+    final cleanLoc = requestedLocation.trim().toLowerCase();
+    if (cleanLoc.isEmpty) return true;
 
-    final firstNames = ['Dr. Rahul', 'Priya', 'Amit', 'Neha', 'Vikram', 'Ananya', 'Rohan', 'Sneha'];
-    final lastNames = ['Sharma', 'Mehta', 'Patel', 'Verma', 'Kapoor', 'Reddy', 'Deshmukh', 'Singhania'];
-    final areas = ['Bandra', 'Andheri', 'South', 'Central', 'Connaught Place', 'Indiranagar', 'Koramangala'];
+    final targetText = '${item.title} ${item.snippet} ${item.url}'.toLowerCase();
 
-    final leads = <Lead>[];
-    final random = Random(42 + config.page);
-    final pageOffset = (config.page - 1) * 7;
+    // 1. Direct full string check
+    if (targetText.contains(cleanLoc)) return true;
 
-    for (var i = 0; i < 12; i++) {
-      final idx = pageOffset + i;
-      final fn = firstNames[idx % firstNames.length];
-      final ln = lastNames[(idx + (config.page - 1)) % lastNames.length];
-      final fullName = '$fn $ln';
-      final area = areas[(idx + config.page) % areas.length];
-      final business = '$fullName $niche Solutions';
-      final plat = platformList[idx % platformList.length];
-      final userSuffix = config.page > 1 ? '_${config.page}_$i' : '';
-      final username = '${fn.toLowerCase()}_${ln.toLowerCase()}_${niche.toLowerCase().replaceAll(RegExp(r'\s+'), '')}$userSuffix';
-      final cleanUsername = username.replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    // 2. Tokenized check for comma/space separated location (e.g. "Lucknow, UP", "South Delhi")
+    final rawTokens = cleanLoc
+        .split(RegExp(r'[,;\-\/|\s]+'))
+        .map((t) => t.trim())
+        .where((t) => t.length >= 2)
+        .toList();
 
-      final phoneDigits = '98${random.nextInt(89999999) + 10000000}';
-      final phone = '+91$phoneDigits';
-      final emailSuffix = config.page > 1 ? '${config.page}$i' : '';
-      final email = '${fn.toLowerCase()}.${ln.toLowerCase()}$emailSuffix@gmail.com'.replaceAll('dr.', '');
+    if (rawTokens.isEmpty) return true;
 
-      String profileUrl;
-      switch (plat) {
-        case 'LinkedIn':
-          profileUrl = 'https://linkedin.com/in/$cleanUsername';
-          break;
-        case 'Facebook':
-          profileUrl = 'https://facebook.com/$cleanUsername';
-          break;
-        case 'X':
-          profileUrl = 'https://x.com/$cleanUsername';
-          break;
-        case 'Instagram':
-        default:
-          profileUrl = 'https://instagram.com/$cleanUsername';
+    for (final token in rawTokens) {
+      if (token.isEmpty) continue;
+      final tokenRegex = RegExp(r'\b' + RegExp.escape(token) + r'\b', caseSensitive: false);
+      if (tokenRegex.hasMatch(targetText) || targetText.contains(token)) {
+        return true;
       }
-
-      leads.add(Lead(
-        id: _generateId(profileUrl),
-        name: fullName,
-        businessName: business,
-        email: email,
-        phone: phone,
-        website: 'https://linktr.ee/$cleanUsername',
-        platform: plat,
-        profileUrl: profileUrl,
-        location: '$area, $loc',
-        niche: niche,
-        bioSnippet: 'Premier $niche in $area, $loc. Expert services, consultations, and verified reviews. Contact: $phone or DM.',
-        extractedAt: DateTime.now(),
-      ));
     }
 
-    return leads;
+    return false;
   }
 
   String _generateId(String seed) {

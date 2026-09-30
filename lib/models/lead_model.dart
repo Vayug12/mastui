@@ -15,6 +15,10 @@ class Lead {
   final bool isWorkEmail;
   final String? emailStatus;
   final List<String>? alternativeEmails;
+  final String? decisionMakerName;
+  final String? decisionMakerRole;
+  final String? decisionMakerEmail;
+  final String? decisionMakerLinkedIn;
 
   const Lead({
     required this.id,
@@ -32,6 +36,10 @@ class Lead {
     this.isWorkEmail = false,
     this.emailStatus,
     this.alternativeEmails,
+    this.decisionMakerName,
+    this.decisionMakerRole,
+    this.decisionMakerEmail,
+    this.decisionMakerLinkedIn,
   });
 
   bool get hasContactInfo =>
@@ -59,6 +67,10 @@ class Lead {
         'isWorkEmail': isWorkEmail,
         'emailStatus': emailStatus,
         'alternativeEmails': alternativeEmails,
+        'decisionMakerName': decisionMakerName,
+        'decisionMakerRole': decisionMakerRole,
+        'decisionMakerEmail': decisionMakerEmail,
+        'decisionMakerLinkedIn': decisionMakerLinkedIn,
       };
 
   factory Lead.fromJson(Map<String, dynamic> json) {
@@ -82,6 +94,10 @@ class Lead {
       alternativeEmails: (json['alternativeEmails'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList(),
+      decisionMakerName: json['decisionMakerName'] as String?,
+      decisionMakerRole: json['decisionMakerRole'] as String?,
+      decisionMakerEmail: json['decisionMakerEmail'] as String?,
+      decisionMakerLinkedIn: json['decisionMakerLinkedIn'] as String?,
     );
   }
 
@@ -93,6 +109,15 @@ class Lead {
       return '"$clean"';
     }
 
+    String escapeUrl(String? url) {
+      if (url == null || url.trim().isEmpty) return '""';
+      var clean = url.replaceAll('"', '""').replaceAll('\n', ' ').trim();
+      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+        clean = 'https://$clean';
+      }
+      return '"$clean"';
+    }
+
     return [
       escape(displayName),
       escape(name),
@@ -101,8 +126,12 @@ class Lead {
       escape(platform),
       escape(location),
       escape(niche),
-      escape(website),
-      escape(profileUrl),
+      escapeUrl(website),
+      escapeUrl(profileUrl),
+      escape(decisionMakerName),
+      escape(decisionMakerRole),
+      escape(decisionMakerEmail),
+      escapeUrl(decisionMakerLinkedIn),
     ].join(',');
   }
 
@@ -117,6 +146,10 @@ class Lead {
       '"Niche"',
       '"Website"',
       '"Profile URL"',
+      '"Decision Maker"',
+      '"Role"',
+      '"Founder Email"',
+      '"Founder LinkedIn"',
     ].join(',');
   }
 
@@ -136,6 +169,10 @@ class Lead {
     bool? isWorkEmail,
     String? emailStatus,
     List<String>? alternativeEmails,
+    String? decisionMakerName,
+    String? decisionMakerRole,
+    String? decisionMakerEmail,
+    String? decisionMakerLinkedIn,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -153,6 +190,10 @@ class Lead {
       isWorkEmail: isWorkEmail ?? this.isWorkEmail,
       emailStatus: emailStatus ?? this.emailStatus,
       alternativeEmails: alternativeEmails ?? this.alternativeEmails,
+      decisionMakerName: decisionMakerName ?? this.decisionMakerName,
+      decisionMakerRole: decisionMakerRole ?? this.decisionMakerRole,
+      decisionMakerEmail: decisionMakerEmail ?? this.decisionMakerEmail,
+      decisionMakerLinkedIn: decisionMakerLinkedIn ?? this.decisionMakerLinkedIn,
     );
   }
 

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../app_links.dart';
 import '../models/lead_model.dart';
 import '../services/app_review_service.dart';
 import '../services/lead_discovery_service.dart';
@@ -40,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     'X',
   ];
   String _selectedPlatform = 'All';
+  String _contactFilter = 'all'; // 'all', 'contact', 'email', 'phone'
 
   final List<Lead> _leads = [];
   bool _isSearching = false;
@@ -112,10 +115,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  List<Lead> get _filteredLeads {
+    return _leads.where((lead) {
+      if (_locationController.text.trim().isNotEmpty) {
+        final locQuery = _locationController.text.trim().toLowerCase();
+        final leadLoc = (lead.location ?? '').toLowerCase();
+        if (!leadLoc.contains(locQuery)) return false;
+      }
+      if (_selectedPlatform != 'All') {
+        if (lead.platform.toLowerCase() != _selectedPlatform.toLowerCase()) {
+          return false;
+        }
+      }
+      if (_contactFilter == 'contact') {
+        if (!lead.hasContactInfo) return false;
+      } else if (_contactFilter == 'email') {
+        if (lead.email == null || lead.email!.trim().isEmpty) return false;
+      } else if (_contactFilter == 'phone') {
+        if (lead.phone == null || lead.phone!.trim().isEmpty) return false;
+      }
+      return true;
+    }).toList();
+  }
+
   int get _activeFilterCount {
     var count = 0;
     if (_locationController.text.trim().isNotEmpty) count++;
     if (_selectedPlatform != 'All') count++;
+    if (_contactFilter != 'all') count++;
     return count;
   }
 
@@ -313,6 +340,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             onPressed: () async {
               Navigator.of(ctx).pop();
               await LeadStorageService.instance.clearLeads();
+              if (!_isSearchBarVisible) {
+                setState(() {
+                  _isSearchBarVisible = true;
+                });
+                _searchBarController.forward();
+              }
               setState(() {
                 _leads.clear();
                 _currentPage = 1;
@@ -328,46 +361,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _openUrl(String urlString) async {
+    final uri = Uri.tryParse(urlString);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Future<void> _exportCsv() async {
-    if (_leads.isEmpty) {
-      _showToast('No leads to export.');
+    final toExport = _filteredLeads;
+    if (toExport.isEmpty) {
+      _showToast('No leads match the current filters.');
       return;
     }
 
     final niche = _nicheController.text.trim();
     final success = await LeadStorageService.instance.exportAndDownloadCsv(
-      _leads,
+      toExport,
       niche: niche.isNotEmpty ? niche : 'leads',
     );
 
     if (success) {
-      _showToast('CSV downloaded (${_leads.length} leads)');
+      _showToast('CSV downloaded (${toExport.length} leads)');
     } else {
       _showToast('Export failed. Please try again.');
     }
   }
 
   Future<void> _exportPdf() async {
-    if (_leads.isEmpty) {
-      _showToast('No leads to export.');
+    final toExport = _filteredLeads;
+    if (toExport.isEmpty) {
+      _showToast('No leads match the current filters.');
       return;
     }
 
     final niche = _nicheController.text.trim();
     final success = await LeadStorageService.instance.exportAndDownloadPdf(
-      _leads,
+      toExport,
       niche: niche.isNotEmpty ? niche : 'leads',
     );
 
     if (success) {
-      _showToast('PDF exported (${_leads.length} leads)');
+      _showToast('PDF exported (${toExport.length} leads)');
     } else {
       _showToast('PDF export failed. Please try again.');
     }
   }
 
   void _openExportBottomSheet() {
-    if (_leads.isEmpty) {
+    final displayed = _filteredLeads;
+    if (displayed.isEmpty) {
       _showToast('No leads to export.');
       return;
     }
@@ -431,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             border: Border.all(color: AppColors.divider),
                           ),
                           child: Text(
-                            '${_leads.length} leads',
+                            '${displayed.length} leads',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -443,27 +486,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 16),
                     _buildExportOptionTile(
-                      icon: Icons.table_chart_rounded,
-                      title: 'Export as CSV',
-                      subtitle: 'Open in Excel, Google Sheets, or CRM software',
+                      icon: Icons.table_chart_outlined,
+                      title: 'Export CSV',
                       badge: '.csv',
                       onTap: () {
                         Navigator.pop(ctx);
                         _exportCsv();
                       },
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _buildExportOptionTile(
-                      icon: Icons.picture_as_pdf_rounded,
-                      title: 'Export as PDF',
-                      subtitle: 'Formatted document report ready to print & share',
+                      icon: Icons.description_outlined,
+                      title: 'Export PDF',
                       badge: '.pdf',
                       onTap: () {
                         Navigator.pop(ctx);
                         _exportPdf();
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+                    _buildExportOptionTile(
+                      icon: Icons.alternate_email_rounded,
+                      title: 'Copy Emails',
+                      badge: 'Copy',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _copyAllEmails();
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildExportOptionTile(
+                      icon: Icons.phone_outlined,
+                      title: 'Copy Phones',
+                      badge: 'Copy',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _copyAllPhones();
+                      },
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -477,7 +538,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildExportOptionTile({
     required IconData icon,
     required String title,
-    required String subtitle,
     required String badge,
     required VoidCallback onTap,
   }) {
@@ -485,7 +545,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: AppColors.secondaryBackground,
           borderRadius: BorderRadius.circular(AppRadius.card),
@@ -493,42 +554,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.divider),
-              ),
-              child: Icon(icon, size: 20, color: AppColors.secondaryBlue),
-            ),
-            const SizedBox(width: 14),
+            Icon(icon, size: 20, color: AppColors.textPrimary),
+            const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -540,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 badge,
                 style: const TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
               ),
@@ -552,18 +590,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _copyAllEmails() async {
-    if (_leads.isEmpty) {
+    final displayed = _filteredLeads;
+    if (displayed.isEmpty) {
       _showToast('No leads available.');
       return;
     }
 
     final count = await LeadStorageService.instance.copyAllEmailsToClipboard(
-      _leads,
+      displayed,
     );
     if (count > 0) {
-      _showToast('$count emails copied');
+      _showToast('$count emails copied to clipboard');
     } else {
-      _showToast('No emails found in current leads');
+      _showToast('No emails found in filtered leads');
+    }
+  }
+
+  Future<void> _copyAllPhones() async {
+    final displayed = _filteredLeads;
+    if (displayed.isEmpty) {
+      _showToast('No leads available.');
+      return;
+    }
+
+    final count = await LeadStorageService.instance.copyAllPhonesToClipboard(
+      displayed,
+    );
+    if (count > 0) {
+      _showToast('$count phone numbers copied to clipboard');
+    } else {
+      _showToast('No phone numbers found in filtered leads');
     }
   }
 
@@ -656,6 +712,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   setModalState(() {
                                     _locationController.clear();
                                     _selectedPlatform = 'All';
+                                    _contactFilter = 'all';
                                   });
                                   setState(() {});
                                 },
@@ -670,6 +727,69 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                               ),
                           ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Contact Requirement Filter Chips
+                        const Text(
+                          'Contact Info',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: [
+                              {'id': 'all', 'label': 'All Leads'},
+                              {'id': 'contact', 'label': 'Email or Phone'},
+                              {'id': 'email', 'label': 'Email Only'},
+                              {'id': 'phone', 'label': 'Phone Only'},
+                            ].map((opt) {
+                              final isSelected = _contactFilter == opt['id'];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: ChoiceChip(
+                                  label: Text(opt['label']!),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setModalState(
+                                        () => _contactFilter = opt['id']!,
+                                      );
+                                      setState(
+                                        () => _contactFilter = opt['id']!,
+                                      );
+                                    }
+                                  },
+                                  labelStyle: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                  ),
+                                  selectedColor: AppColors.textPrimary,
+                                  backgroundColor: AppColors.secondaryBackground,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  side: BorderSide.none,
+                                  showCheckmark: false,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
                         ),
                         const SizedBox(height: 20),
 
@@ -882,6 +1002,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _copyAllEmails();
               } else if (value == 'rate_us') {
                 AppReviewService.instance.openStoreListing();
+              } else if (value == 'privacy_policy') {
+                _openUrl(AppLinks.privacy);
+              } else if (value == 'terms_of_use') {
+                _openUrl(AppLinks.terms);
               } else if (value == 'clear_leads') {
                 _clearAllLeads();
               }
@@ -930,6 +1054,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ),
               ),
+              PopupMenuItem(
+                value: 'privacy_policy',
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.privacy_tip_outlined,
+                      size: 18,
+                      color: AppColors.textPrimary,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Privacy Policy',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'terms_of_use',
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 18,
+                      color: AppColors.textPrimary,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Terms of Use',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'clear_leads',
@@ -964,7 +1130,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // Collapsible Top Search Bar & Status Container on Scroll
             SizeTransition(
               sizeFactor: _searchBarAnimation,
-              axisAlignment: -1.0,
+              alignment: Alignment.topCenter,
               child: FadeTransition(
                 opacity: _searchBarAnimation,
                 child: Column(
@@ -1069,7 +1235,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   boxShadow: AppShadows.softCard,
                                 ),
                                 child: Text(
-                                  '${_leads.length} leads',
+                                  _activeFilterCount > 0
+                                      ? '${_filteredLeads.length} of ${_leads.length} leads'
+                                      : '${_leads.length} leads',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -1091,70 +1259,131 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Expanded(
               child: _leads.isEmpty
                   ? (_isSearching
-                        ? _buildSearchingState(
-                            _nicheController.text.trim().isNotEmpty
-                                ? _nicheController.text.trim()
-                                : _searchedNiche,
-                          )
+                        ? _buildSearchingState()
                         : _buildEmptyState())
-                  : NotificationListener<UserScrollNotification>(
-                      onNotification: (notification) {
-                        if (notification.direction == ScrollDirection.reverse) {
-                          if (_isSearchBarVisible) {
-                            setState(() {
-                              _isSearchBarVisible = false;
-                            });
-                            _searchBarController.reverse();
-                          }
-                        } else if (notification.direction ==
-                            ScrollDirection.forward) {
-                          if (!_isSearchBarVisible) {
-                            setState(() {
-                              _isSearchBarVisible = true;
-                            });
-                            _searchBarController.forward();
-                          }
-                        }
-                        return false;
-                      },
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        itemCount: _leads.length + (_leads.isNotEmpty ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _leads.length) {
-                            return _buildLoadMoreSection();
-                          }
-                          final lead = _leads[index];
-                          return LeadCard(
-                            lead: lead,
-                            onDelete: () {
-                              setState(() {
-                                _leads.removeAt(index);
-                              });
-                              _persistCurrentLeads();
+                  : _filteredLeads.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.filter_list_off_rounded,
+                                  size: 40,
+                                  color: AppColors.textMuted,
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'No matching leads',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Try adjusting your contact or platform filters.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: AppColors.divider),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.button),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    if (!_isSearchBarVisible) {
+                                      setState(() {
+                                        _isSearchBarVisible = true;
+                                      });
+                                      _searchBarController.forward();
+                                    }
+                                    setState(() {
+                                      _selectedPlatform = 'All';
+                                      _contactFilter = 'all';
+                                      _locationController.clear();
+                                    });
+                                  },
+                                  child: const Text('Reset Filters'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : NotificationListener<UserScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.direction == ScrollDirection.reverse) {
+                              if (_isSearchBarVisible) {
+                                setState(() {
+                                  _isSearchBarVisible = false;
+                                });
+                                _searchBarController.reverse();
+                              }
+                            } else if (notification.direction ==
+                                ScrollDirection.forward) {
+                              if (!_isSearchBarVisible) {
+                                setState(() {
+                                  _isSearchBarVisible = true;
+                                });
+                                _searchBarController.forward();
+                              }
+                            }
+                            return false;
+                          },
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            itemCount: _filteredLeads.length + (_leads.isNotEmpty ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _filteredLeads.length) {
+                                return _buildLoadMoreSection();
+                              }
+                              final lead = _filteredLeads[index];
+                              return LeadCard(
+                                lead: lead,
+                                onLeadUpdated: (updatedLead) {
+                                  final originalIndex = _leads.indexWhere((l) => l.id == lead.id || l.profileUrl == lead.profileUrl);
+                                  setState(() {
+                                    if (originalIndex != -1) {
+                                      _leads[originalIndex] = updatedLead;
+                                    }
+                                  });
+                                  _persistCurrentLeads();
+                                },
+                                onDelete: () {
+                                  setState(() {
+                                    _leads.removeWhere((l) => l.id == lead.id || l.profileUrl == lead.profileUrl);
+                                  });
+                                  _persistCurrentLeads();
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
             ),
 
-            // Pinned Bottom Actions Bar (Apple HIG Luxury Glass/Surface Bar)
+            // Pinned Bottom Actions Bar (Apple HIG Minimal Surface Bar without divider)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.divider)),
               ),
               child: Row(
                 children: [
                   Expanded(
-                    flex: 5,
+                    flex: _leads.isNotEmpty ? 5 : 1,
                     child: SizedBox(
                       height: 52,
                       child: FilledButton(
@@ -1208,51 +1437,53 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: AppColors.surface,
-                          side: const BorderSide(color: AppColors.divider),
-                          padding: EdgeInsets.zero,
-                          alignment: Alignment.center,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppRadius.button,
+                  if (_leads.isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 3,
+                      child: SizedBox(
+                        height: 52,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: AppColors.surface,
+                            side: const BorderSide(color: AppColors.divider),
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.center,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.button,
+                              ),
                             ),
                           ),
-                        ),
-                        onPressed: _openExportBottomSheet,
-                        child: const Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.download_rounded,
-                                size: 18,
-                                color: AppColors.secondaryBlue,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'Export',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                  height: 1.1,
+                          onPressed: _openExportBottomSheet,
+                          child: const Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.download_rounded,
+                                  size: 18,
+                                  color: AppColors.secondaryBlue,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 6),
+                                Text(
+                                  'Export',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1262,94 +1493,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSearchingState(String niche) {
-    final queryText = niche.isNotEmpty ? niche : 'leads';
+  Widget _buildSearchingState() {
     return ListView(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       children: [
-        Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.secondaryBackground,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: AppColors.divider, width: 1),
-          ),
-          child: Row(
-            children: [
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryGreen.withValues(
-                        alpha: 0.12 + (_pulseAnimation.value * 0.12),
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryGreen,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.secondaryGreen.withValues(
-                                alpha: 0.3 + (_pulseAnimation.value * 0.3),
-                              ),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Searching leads for "$queryText"...',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Scanning Instagram, LinkedIn, Facebook, X',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.secondaryGreen,
-                ),
-              ),
-            ],
-          ),
-        ),
         _buildSkeletonCard(),
         const SizedBox(height: 12),
         _buildSkeletonCard(),

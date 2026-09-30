@@ -120,12 +120,6 @@ class B2bEmailService {
       }
     }
 
-    // 3. Infer from business / company name
-    if (businessName != null && businessName.trim().isNotEmpty) {
-      final inferred = inferDomainFromCompanyName(businessName);
-      if (inferred != null) return inferred;
-    }
-
     return null;
   }
 
@@ -148,18 +142,6 @@ class B2bEmailService {
     s = s.replaceAll(RegExp(r'[^a-z0-9.-]'), '');
     if (s.contains('.') && s.length >= 4) {
       return s;
-    }
-    return null;
-  }
-
-  /// Infers a corporate domain candidate from a business or company name (e.g. "Razorpay Software" -> "razorpay.com").
-  String? inferDomainFromCompanyName(String companyName) {
-    var cleaned = companyName.toLowerCase();
-    cleaned = cleaned.replaceAll(_companySuffixRegex, '').trim();
-    cleaned = cleaned.replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-    if (cleaned.length >= 3) {
-      return '$cleaned.com';
     }
     return null;
   }

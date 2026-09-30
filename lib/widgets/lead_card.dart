@@ -3,21 +3,34 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/lead_model.dart';
+import '../services/decision_maker_service.dart';
 import '../services/duckduckgo_search_service.dart';
 import '../services/email_verification_service.dart';
 import '../theme/app_colors.dart';
+import 'lead_detail_bottom_sheet.dart';
 
 /// Clean, minimal lead item card adhering to mastui/design.md.
 /// Soft 18px corners, white background, #10A37F subtle accent, no heavy borders.
-class LeadCard extends StatelessWidget {
+class LeadCard extends StatefulWidget {
   final Lead lead;
   final VoidCallback? onDelete;
+  final ValueChanged<Lead>? onLeadUpdated;
 
   const LeadCard({
     super.key,
     required this.lead,
     this.onDelete,
+    this.onLeadUpdated,
   });
+
+  @override
+  State<LeadCard> createState() => _LeadCardState();
+}
+
+class _LeadCardState extends State<LeadCard> {
+  bool _isEnriching = false;
+
+  Lead get lead => widget.lead;
 
   Future<void> _launchUrl(String urlString) async {
     final cleanUrl = DuckDuckGoSearchService.instance.cleanRedirectUrl(urlString);
@@ -67,6 +80,79 @@ class LeadCard extends StatelessWidget {
     );
   }
 
+  Future<void> _enrichDecisionMaker() async {
+    if (_isEnriching) return;
+    setState(() => _isEnriching = true);
+
+    try {
+      final result = await DecisionMakerService.instance.enrichDecisionMaker(lead);
+      if (!mounted) return;
+
+      if (result != null) {
+        final updatedLead = lead.copyWith(
+          decisionMakerName: result.name,
+          decisionMakerRole: result.role,
+          decisionMakerLinkedIn: result.linkedInUrl,
+          decisionMakerEmail: result.email,
+        );
+        widget.onLeadUpdated?.call(updatedLead);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Found: ${result.name} (${result.role})',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            duration: const Duration(seconds: 2),
+            backgroundColor: AppColors.secondaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'No verified Founder/CEO profile found for this business.',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            duration: const Duration(seconds: 2),
+            backgroundColor: AppColors.textPrimary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Search lookup error. Please try again.',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            duration: const Duration(seconds: 2),
+            backgroundColor: AppColors.textPrimary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isEnriching = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasEmail = lead.email != null && lead.email!.trim().isNotEmpty;
@@ -74,6 +160,7 @@ class LeadCard extends StatelessWidget {
     final hasWhatsApp = _getWhatsAppDigits(lead.phone) != null;
     final hasWebsite = lead.website != null && lead.website!.trim().isNotEmpty;
     final hasContactInfo = hasEmail || hasPhone || hasWebsite;
+    final hasDecisionMaker = lead.decisionMakerName != null && lead.decisionMakerName!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -83,73 +170,89 @@ class LeadCard extends StatelessWidget {
         border: Border.all(color: AppColors.divider, width: 1),
         boxShadow: AppShadows.softCard,
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row: Clickable Platform Badge (opens profile) + Delete button
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: lead.profileUrl.isNotEmpty
-                          ? () => _launchUrl(lead.profileUrl)
-                          : null,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryBackground,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.divider, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              lead.platform,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                                letterSpacing: 0.2,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: () => LeadDetailBottomSheet.show(
+            context,
+            lead: lead,
+            onDelete: widget.onDelete,
+            onLeadUpdated: widget.onLeadUpdated,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Row: Clickable Platform Badge (opens profile) + Expand Cue + Delete button
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: lead.profileUrl.isNotEmpty
+                                ? () => _launchUrl(lead.profileUrl)
+                                : null,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondaryBackground,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.divider, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    lead.platform,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                  if (lead.profileUrl.isNotEmpty) ...[
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.arrow_outward_rounded,
+                                      size: 11,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            if (lead.profileUrl.isNotEmpty) ...[
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.arrow_outward_rounded,
-                                size: 11,
-                                color: AppColors.textMuted,
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppColors.textDisabled,
+                    ),
+                    if (widget.onDelete != null) ...[
+                      const SizedBox(width: 2),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 16),
+                        color: AppColors.textMuted,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        splashRadius: 16,
+                        tooltip: 'Remove',
+                        onPressed: widget.onDelete,
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-              if (onDelete != null) ...[
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  color: AppColors.textMuted,
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  splashRadius: 16,
-                  tooltip: 'Remove',
-                  onPressed: onDelete,
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
           // Business / Title Name
           Text(
@@ -361,6 +464,187 @@ class LeadCard extends StatelessWidget {
             ),
           ],
 
+          // Decision Maker / Founder Section (Method 2 On-Demand CEO Enrichment)
+          const SizedBox(height: 10),
+          if (hasDecisionMaker) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.secondaryBackground,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.divider, width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        '👑',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${lead.decisionMakerName!} (${lead.decisionMakerRole ?? "Founder & CEO"})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (lead.decisionMakerLinkedIn != null &&
+                          lead.decisionMakerLinkedIn!.isNotEmpty) ...[
+                        InkWell(
+                          onTap: () => _launchUrl(lead.decisionMakerLinkedIn!),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              children: const [
+                                Text(
+                                  'LinkedIn',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.secondaryBlue,
+                                  ),
+                                ),
+                                SizedBox(width: 2),
+                                Icon(
+                                  Icons.arrow_outward_rounded,
+                                  size: 11,
+                                  color: AppColors.secondaryBlue,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (lead.decisionMakerEmail != null &&
+                      lead.decisionMakerEmail!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _copyToClipboard(
+                        context,
+                        lead.decisionMakerEmail!.trim(),
+                        'Founder Email',
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.mail_outline_rounded,
+                            size: 13,
+                            color: AppColors.secondaryGreen,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              lead.decisionMakerEmail!.trim(),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.divider, width: 1),
+                            ),
+                            child: const Text(
+                              'Direct Work',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.secondaryGreen,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.copy_rounded,
+                            size: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ] else ...[
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isEnriching ? null : _enrichDecisionMaker,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.divider, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isEnriching) ...[
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Finding Decision Maker...',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ] else ...[
+                        const Text(
+                          '👑',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(width: 5),
+                        const Text(
+                          'Find Founder / CEO',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        const Icon(
+                          Icons.search_rounded,
+                          size: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           // Bio Snippet (only shown if present)
           if (lead.bioSnippet != null && lead.bioSnippet!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -377,6 +661,9 @@ class LeadCard extends StatelessWidget {
           ],
         ],
       ),
+    ),
+  ),
+),
     );
   }
 }
@@ -395,18 +682,21 @@ class _EmailVerifiedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isWorkEmail) {
-      final isDirectVerified = emailStatus == 'verified';
+    if (isWorkEmail && emailStatus == 'verified') {
       return _buildBadge(
-        label: isDirectVerified ? 'Verified Work' : 'Work Email',
-        icon: isDirectVerified ? Icons.verified_rounded : Icons.check_circle_outline_rounded,
+        label: 'Verified Work',
+        icon: Icons.verified_rounded,
         color: AppColors.secondaryGreen,
       );
     }
 
     final cached = EmailVerificationService.instance.isTrustedOrCached(email);
     if (cached == true) {
-      return _buildBadge(label: 'Active', icon: Icons.check_circle_outline_rounded, color: AppColors.secondaryGreen);
+      return _buildBadge(
+        label: 'Verified',
+        icon: Icons.check_circle_outline_rounded,
+        color: AppColors.secondaryGreen,
+      );
     }
     if (cached == false) {
       return const SizedBox.shrink();
@@ -416,7 +706,11 @@ class _EmailVerifiedBadge extends StatelessWidget {
       future: EmailVerificationService.instance.isEmailValid(email),
       builder: (context, snapshot) {
         if (snapshot.data == true) {
-          return _buildBadge(label: 'Active', icon: Icons.check_circle_outline_rounded, color: AppColors.secondaryGreen);
+          return _buildBadge(
+            label: 'Verified',
+            icon: Icons.check_circle_outline_rounded,
+            color: AppColors.secondaryGreen,
+          );
         }
         return const SizedBox.shrink();
       },

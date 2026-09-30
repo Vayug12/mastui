@@ -282,7 +282,8 @@ void main() {
       );
     });
 
-    test('Generates realistic fallback leads when web search yields 0 leads', () {
+    test('Streams empty list gracefully when web search yields 0 leads (Zero Fake Data Policy)', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [];
       const config = LeadDiscoveryConfig(
         niche: 'Dentists',
         location: 'Mumbai',
@@ -291,36 +292,15 @@ void main() {
         extractPhones: true,
       );
 
-      final fallbackLeads = LeadDiscoveryService.instance.generateFallbackLeads(config);
-      expect(fallbackLeads, isNotEmpty);
-      expect(fallbackLeads.length, greaterThanOrEqualTo(10));
-      expect(fallbackLeads.first.niche, 'Dentists');
-      expect(fallbackLeads.first.location, contains('Mumbai'));
-      expect(fallbackLeads.first.phone, startsWith('+9198'));
-      expect(fallbackLeads.first.email, contains('@gmail.com'));
-      expect(fallbackLeads.first.profileUrl, startsWith('https://instagram.com/'));
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads, isEmpty);
     });
 
     test('LeadDiscoveryConfig defaults to unlimited leads (maxResults is null)', () {
       const config = LeadDiscoveryConfig(niche: 'Real Estate');
       expect(config.maxResults, isNull);
-    });
-
-    test('Generates distinct leads across different pagination pages', () {
-      const page1Config = LeadDiscoveryConfig(
-        niche: 'Real Estate',
-        page: 1,
-      );
-      const page2Config = LeadDiscoveryConfig(
-        niche: 'Real Estate',
-        page: 2,
-      );
-
-      final page1Leads = LeadDiscoveryService.instance.generateFallbackLeads(page1Config);
-      final page2Leads = LeadDiscoveryService.instance.generateFallbackLeads(page2Config);
-
-      expect(page1Leads.first.email, isNot(equals(page2Leads.first.email)));
-      expect(page1Leads.first.profileUrl, isNot(equals(page2Leads.first.profileUrl)));
     });
 
     test('Filters out random 3rd-party article URLs when social platform is requested', () async {
@@ -352,5 +332,146 @@ void main() {
       expect(leads.first.profileUrl, 'https://instagram.com/rahul_digital/');
       expect(leads.first.email, 'rahul@gmail.com');
     });
+
+    test('Strict Location Filter: Only returns leads matching requested location and discards other cities', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [
+        const SearchResultItem(
+          title: 'Dr. Amit Verma - Dentist in Lucknow (@lucknow_dentist) • Instagram',
+          url: 'https://www.instagram.com/lucknow_dentist/',
+          snippet: 'Best Dental Clinic in Hazratganj, Lucknow. Email: amit@lucknowdental.com | Phone: +919876543210',
+          sourceEngine: 'Bing',
+        ),
+        const SearchResultItem(
+          title: 'Dr. Rohit Mehta - Dentist in Delhi (@delhi_dentist) • Instagram',
+          url: 'https://www.instagram.com/delhi_dentist/',
+          snippet: 'Dental specialist in Connaught Place, New Delhi. Email: rohit@delhidental.com | Phone: +919811122233',
+          sourceEngine: 'Bing',
+        ),
+        const SearchResultItem(
+          title: 'Dr. Pooja Patil - Mumbai Dental (@mumbai_smiles) • Instagram',
+          url: 'https://www.instagram.com/mumbai_smiles/',
+          snippet: 'Cosmetic Dentist in Bandra West, Mumbai. Email: pooja@mumbaidoc.com | Phone: +919820011223',
+          sourceEngine: 'Bing',
+        ),
+      ];
+
+      const config = LeadDiscoveryConfig(
+        niche: 'Dentist',
+        location: 'Lucknow',
+        platforms: ['Instagram'],
+      );
+
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads.length, 1);
+      expect(leads.first.name, contains('Amit Verma'));
+      expect(leads.first.email, 'amit@lucknowdental.com');
+      expect(leads.first.location, 'Lucknow');
+    });
+
+    test('Strict Location Filter: Supports multi-word location matching (e.g. Lucknow, UP)', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [
+        const SearchResultItem(
+          title: 'Lucknow Cafe (@lucknowcafe) • Instagram',
+          url: 'https://www.instagram.com/lucknowcafe/',
+          snippet: 'Authentic dining in Gomti Nagar, Lucknow. Email: info@lucknowcafe.com',
+          sourceEngine: 'Yahoo',
+        ),
+        const SearchResultItem(
+          title: 'Kanpur Sweets (@kanpursweets) • Instagram',
+          url: 'https://www.instagram.com/kanpursweets/',
+          snippet: 'Finest sweets in Kanpur. Email: kanpur@sweets.com',
+          sourceEngine: 'Yahoo',
+        ),
+      ];
+
+      const config = LeadDiscoveryConfig(
+        niche: 'Cafe',
+        location: 'Lucknow, UP',
+        platforms: ['Instagram'],
+      );
+
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads.length, 1);
+      expect(leads.first.email, 'info@lucknowcafe.com');
+    });
+
+    test('Hybrid Architecture: Does NOT misidentify sentences like "visit us at brand.com" as emails', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [
+        const SearchResultItem(
+          title: 'Fashion Brand Store (@fashion_store) • Instagram',
+          url: 'https://www.instagram.com/fashion_store/',
+          snippet: 'Trendy fashion in Delhi. Visit us at mybrand.com or shop at store.in for new arrivals.',
+          sourceEngine: 'Yahoo',
+        ),
+      ];
+
+      const config = LeadDiscoveryConfig(
+        niche: 'Fashion',
+        platforms: ['Instagram'],
+        extractEmails: false,
+        extractPhones: false,
+      );
+
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads.length, 1);
+      // "us at mybrand.com" or "shop at store.in" MUST NOT be parsed as emails
+      expect(leads.first.email, isNull);
+    });
+
+    test('Hybrid Architecture: Rejects placeholder domains and generic platform emails', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [
+        const SearchResultItem(
+          title: 'Designer Studio (@designer_studio) • Instagram',
+          url: 'https://www.instagram.com/designer_studio/',
+          snippet: 'Studio in Bangalore. Contact: support@instagram.com or user@example.com for queries.',
+          sourceEngine: 'Yahoo',
+        ),
+      ];
+
+      const config = LeadDiscoveryConfig(
+        niche: 'Design',
+        platforms: ['Instagram'],
+        extractEmails: false,
+        extractPhones: false,
+      );
+
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads.length, 1);
+      // Both support@instagram.com and user@example.com MUST be blacklisted
+      expect(leads.first.email, isNull);
+    });
+
+    test('Hybrid Architecture: Rejects prices and pin codes mistakenly formatted as phone numbers', () async {
+      DuckDuckGoSearchService.instance.testMockResults = [
+        const SearchResultItem(
+          title: 'Apparel Hub (@apparel_hub) • Instagram',
+          url: 'https://www.instagram.com/apparel_hub/',
+          snippet: 'Best clothes in Mumbai. Special wedding suit price: 1500099999. Pincode: 110001.',
+          sourceEngine: 'Yahoo',
+        ),
+      ];
+
+      const config = LeadDiscoveryConfig(
+        niche: 'Apparel',
+        platforms: ['Instagram'],
+        extractEmails: false,
+        extractPhones: false,
+      );
+
+      final leads = await LeadDiscoveryService.instance.discoverLeadsStream(config).toList();
+      DuckDuckGoSearchService.instance.testMockResults = null;
+
+      expect(leads.length, 1);
+      expect(leads.first.phone, isNull);
+    });
   });
 }
+

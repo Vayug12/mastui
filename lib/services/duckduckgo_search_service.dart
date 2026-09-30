@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'in_app_web_search_service.dart';
 
 /// Raw search result extracted from search engines (Yahoo, Bing, DuckDuckGo).
 class SearchResultItem {
@@ -20,7 +21,7 @@ class SearchResultItem {
 }
 
 /// Multi-engine search service that orchestrates queries across Yahoo, Bing,
-/// and DuckDuckGo with automatic anomaly detection and seamless failover.
+/// InApp Browser Engine, and DuckDuckGo Lite with automatic anomaly detection and seamless failover.
 class DuckDuckGoSearchService {
   DuckDuckGoSearchService._();
   static final instance = DuckDuckGoSearchService._();
@@ -37,6 +38,15 @@ class DuckDuckGoSearchService {
     'Upgrade-Insecure-Requests': '1',
   };
 
+  static const Map<String, String> _mobileHeaders = {
+    'User-Agent':
+        'Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.113 Mobile Safari/537.36',
+    'Accept':
+        'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://lite.duckduckgo.com/',
+  };
+
   /// Tracks whether DuckDuckGo is currently blocked by CAPTCHA/anomaly modal.
   bool _isDdgRateLimited = false;
   bool get isDdgRateLimited => _isDdgRateLimited;
@@ -44,33 +54,83 @@ class DuckDuckGoSearchService {
   /// Optional mock results for test environments
   List<SearchResultItem>? testMockResults;
 
-  /// Searches using the resilient multi-engine pipeline:
-  /// Primary: Yahoo Search -> Secondary: Bing -> Tertiary: DuckDuckGo.
+  /// Tracks rotating engine calls to prevent consecutive bursts to a single provider.
+  int _searchCallCount = 0;
+
+  /// Searches using the resilient multi-engine pipeline with automatic engine rotation:
+  /// Primary engines rotate between Yahoo & Bing to prevent single-provider IP rate limits,
+  /// with automatic fallback to DuckDuckGo Lite & HTML.
   Future<List<SearchResultItem>> search(
     String query, {
     int page = 1,
     Duration timeout = const Duration(seconds: 12),
+    String? preferredEngine,
   }) async {
     if (testMockResults != null) {
       return testMockResults!;
     }
-    // 1. Primary Engine: Yahoo Search (100% success rate, no CAPTCHA blocks)
+
+    _searchCallCount++;
+    // Alternate starting engine if preferredEngine is not specified: even -> Yahoo, odd -> Bing
+    final primary = preferredEngine ?? (_searchCallCount % 2 == 0 ? 'Yahoo' : 'Bing');
+
+    // 1. Primary Stage: In-App Browser Engine (Native Chromium/WebKit)
+    // Runs with real browser TLS fingerprint, cookies, and JS execution to bypass bot filters
     try {
-      final yahooResults = await searchYahoo(query, page: page, timeout: timeout);
-      if (yahooResults.isNotEmpty) {
-        return yahooResults;
+      if (primary == 'Bing') {
+        final inAppBing = await InAppWebSearchService.instance.searchBing(query, page: page, timeout: timeout);
+        if (inAppBing.isNotEmpty) return inAppBing;
+
+        final inAppYahoo = await InAppWebSearchService.instance.searchYahoo(query, page: page, timeout: timeout);
+        if (inAppYahoo.isNotEmpty) return inAppYahoo;
+      } else {
+        final inAppYahoo = await InAppWebSearchService.instance.searchYahoo(query, page: page, timeout: timeout);
+        if (inAppYahoo.isNotEmpty) return inAppYahoo;
+
+        final inAppBing = await InAppWebSearchService.instance.searchBing(query, page: page, timeout: timeout);
+        if (inAppBing.isNotEmpty) return inAppBing;
+      }
+    } catch (_) {
+      // In-app browser unavailable (e.g. unit test or non-mobile host), continue to direct HTTP
+    }
+
+    // 2. Direct HTTP Fallback Pipeline (Yahoo <-> Bing)
+    if (primary == 'Bing') {
+      try {
+        final bingResults = await searchBing(query, page: page, timeout: timeout);
+        if (bingResults.isNotEmpty) return bingResults;
+      } catch (_) {}
+
+      try {
+        final yahooResults = await searchYahoo(query, page: page, timeout: timeout);
+        if (yahooResults.isNotEmpty) return yahooResults;
+      } catch (_) {}
+    } else {
+      try {
+        final yahooResults = await searchYahoo(query, page: page, timeout: timeout);
+        if (yahooResults.isNotEmpty) return yahooResults;
+      } catch (_) {}
+
+      try {
+        final bingResults = await searchBing(query, page: page, timeout: timeout);
+        if (bingResults.isNotEmpty) return bingResults;
+      } catch (_) {}
+    }
+
+    // 3. Tertiary Fallback: In-App DuckDuckGo or DuckDuckGo Lite Mobile Engine
+    try {
+      final inAppDdg = await InAppWebSearchService.instance.searchDuckDuckGo(query, page: page, timeout: timeout);
+      if (inAppDdg.isNotEmpty) return inAppDdg;
+    } catch (_) {}
+
+    try {
+      final ddgLiteResults = await searchDuckDuckGoLite(query, page: page, timeout: timeout);
+      if (ddgLiteResults.isNotEmpty) {
+        return ddgLiteResults;
       }
     } catch (_) {}
 
-    // 2. Secondary Engine: Bing Search
-    try {
-      final bingResults = await searchBing(query, page: page, timeout: timeout);
-      if (bingResults.isNotEmpty) {
-        return bingResults;
-      }
-    } catch (_) {}
-
-    // 3. Tertiary Engine: DuckDuckGo (with anomaly guard)
+    // 4. Quaternary Fallback: DuckDuckGo HTML Engine (with anomaly guard)
     if (!_isDdgRateLimited) {
       try {
         final ddgResults = await searchDuckDuckGo(query, page: page, timeout: timeout);
@@ -265,10 +325,114 @@ class DuckDuckGoSearchService {
       }
     }
 
+    // Fallback: direct pattern match across the entire HTML if container block regex missed
+    if (results.isEmpty) {
+      final titles = titleRegex.allMatches(html).toList();
+      final snippets = snippetRegex.allMatches(html).toList();
+
+      for (var i = 0; i < titles.length; i++) {
+        final rawUrl = titles[i].group(1) ?? '';
+        final rawTitle = titles[i].group(2) ?? '';
+        final rawSnippet = i < snippets.length ? (snippets[i].group(1) ?? '') : '';
+
+        final cleanUrl = _cleanBingUrl(rawUrl);
+        final cleanTitle = _cleanHtml(rawTitle);
+        final cleanSnippet = _cleanHtml(rawSnippet);
+
+        if (cleanTitle.isNotEmpty && cleanUrl.isNotEmpty) {
+          results.add(SearchResultItem(
+            title: cleanTitle,
+            url: cleanUrl,
+            snippet: cleanSnippet.isNotEmpty ? cleanSnippet : cleanTitle,
+            sourceEngine: 'Bing',
+          ));
+        }
+      }
+    }
+
     return results;
   }
 
-  /// Executes search against DuckDuckGo HTML / Lite with anomaly detection and pagination.
+  /// Executes search against DuckDuckGo Lite endpoint (Tarika 2) with Mobile headers.
+  Future<List<SearchResultItem>> searchDuckDuckGoLite(
+    String query, {
+    int page = 1,
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
+    try {
+      const ddgLiteUrl = 'https://lite.duckduckgo.com/lite/';
+      final offset = (page - 1) * 30;
+      final response = await http
+          .post(
+            Uri.parse(ddgLiteUrl),
+            headers: {
+              ..._mobileHeaders,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: {
+              'q': query,
+              's': offset > 0 ? '$offset' : '',
+              'kl': 'wt-wt',
+            },
+          )
+          .timeout(timeout);
+
+      if (response.statusCode != 200 && response.statusCode != 202) {
+        return [];
+      }
+
+      if (_isDdgAnomaly(response.body)) {
+        return [];
+      }
+
+      return parseDdgLiteResults(response.body);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Parses DuckDuckGo Lite HTML table results.
+  List<SearchResultItem> parseDdgLiteResults(String html) {
+    if (_isDdgAnomaly(html)) return [];
+    final results = <SearchResultItem>[];
+
+    final linkRegex = RegExp(
+      r'<a[^>]*class="[^"]*result-link[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>',
+      caseSensitive: false,
+      dotAll: true,
+    );
+    final snippetRegex = RegExp(
+      r'<td[^>]*class="[^"]*result-snippet[^"]*"[^>]*>(.*?)<\/td>',
+      caseSensitive: false,
+      dotAll: true,
+    );
+
+    final links = linkRegex.allMatches(html).toList();
+    final snippets = snippetRegex.allMatches(html).toList();
+
+    for (var i = 0; i < links.length; i++) {
+      final rawUrl = links[i].group(1) ?? '';
+      final rawTitle = links[i].group(2) ?? '';
+      final rawSnippet = i < snippets.length ? (snippets[i].group(1) ?? '') : '';
+
+      final cleanUrl = _cleanDdgUrl(rawUrl);
+      final cleanTitle = _cleanHtml(rawTitle);
+      final cleanSnippet = _cleanHtml(rawSnippet);
+
+      if (cleanTitle.isNotEmpty && cleanUrl.isNotEmpty) {
+        results.add(SearchResultItem(
+          title: cleanTitle,
+          url: cleanUrl,
+          snippet: cleanSnippet.isNotEmpty ? cleanSnippet : cleanTitle,
+          sourceEngine: 'DuckDuckGo',
+        ));
+      }
+    }
+
+    return results;
+  }
+
+  /// Executes search against DuckDuckGo HTML with anomaly detection and pagination.
   Future<List<SearchResultItem>> searchDuckDuckGo(
     String query, {
     int page = 1,
@@ -380,7 +544,7 @@ class DuckDuckGoSearchService {
     if (url.contains('/ck/a?') || url.contains('bing.com/ck/a?')) {
       return _cleanBingUrl(url);
     }
-    if (url.contains('/RU=')) {
+    if (url.contains('/RU=') || url.contains('RU=')) {
       return _cleanYahooUrl(url);
     }
     if (url.contains('uddg=')) {
@@ -392,17 +556,21 @@ class DuckDuckGoSearchService {
   /// Decodes Yahoo redirect URLs: /RU=https%3a%2f%2f.../RK=2/
   String _cleanYahooUrl(String rawUrl) {
     var url = rawUrl.trim().replaceAll('&amp;', '&');
-    if (url.contains('/RU=')) {
-      final match = RegExp(r'/RU=([^/]+)(?:/RK=|\/|$)').firstMatch(url);
+    if (url.contains('/RU=') || url.contains('RU=')) {
+      final match = RegExp(r'[?&/]RU=([^/]+?)(?:/RK=|\/|\s|$)').firstMatch(url);
       if (match != null) {
         final encoded = match.group(1) ?? '';
-        return Uri.decodeComponent(encoded);
+        try {
+          return Uri.decodeComponent(encoded);
+        } catch (_) {
+          return encoded;
+        }
       }
     }
     return url;
   }
 
-  /// Decodes Bing redirect URLs: bing.com/ck/a?...&u=a1<base64>
+  /// Decodes Bing redirect URLs: `bing.com/ck/a?...&u=a1<base64>`
   String _cleanBingUrl(String rawUrl) {
     var url = rawUrl.trim().replaceAll('&amp;', '&');
     if (url.contains('/ck/a?') || url.contains('bing.com/ck/a?')) {

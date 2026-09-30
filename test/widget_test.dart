@@ -20,7 +20,8 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.textContaining('GetLead'), findsOneWidget);
     expect(find.text('Generate Leads'), findsOneWidget);
-    expect(find.text('Export'), findsOneWidget);
+    // Export button is hidden when there are 0 leads
+    expect(find.text('Export'), findsNothing);
 
     // Verify more_vert menu and filter button in top AppBar
     expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
@@ -41,11 +42,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Filters'), findsNothing);
-
-    // Tap Export button when empty -> shows toast/snack
-    await tester.tap(find.text('Export'));
-    await tester.pumpAndSettle();
-    expect(find.text('No leads to export.'), findsOneWidget);
   });
 
   testWidgets('LeadCard renders without overflow on narrow width and respects clean UI',
@@ -175,7 +171,7 @@ void main() {
 
     // 1. Verify old lead is AUTOMATICALLY CLEARED from view
     expect(find.text('Old Real Estate Lead'), findsNothing);
-    expect(find.textContaining('Searching leads for "Dentists"'), findsOneWidget);
+    expect(find.textContaining('Searching verified leads for Dentists'), findsOneWidget);
 
     // 2. Emit a new Dentist lead into the active stream
     streamController.add(
@@ -192,6 +188,8 @@ void main() {
 
     // 3. Verify the new lead appears
     expect(find.text('Dr. Smile Dental Clinic'), findsOneWidget);
+    // Export button is now visible because leads exist
+    expect(find.text('Export'), findsOneWidget);
 
     // 4. Verify old lead is NEVER mixed with the new category
     expect(find.text('Old Real Estate Lead'), findsNothing);
