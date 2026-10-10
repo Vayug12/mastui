@@ -15,7 +15,7 @@ class RemoveAdsCapsule extends StatelessWidget {
       valueListenable: SubscriptionService.instance.isAdFreeNotifier,
       builder: (context, isAdFree, _) {
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4.0),
+          padding: const EdgeInsets.only(top: 12.0, bottom: 12.0, left: 4.0, right: 0.0),
           child: Material(
             color: Colors.transparent,
             child: InkWell(

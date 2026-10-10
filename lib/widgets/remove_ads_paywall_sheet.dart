@@ -392,9 +392,11 @@ class _RemoveAdsPaywallSheetState extends State<RemoveAdsPaywallSheet> {
               ),
               const SizedBox(width: 14),
 
-              // Plan title & badge
+              // Plan title & badge (Column layout prevents horizontal collision)
               Expanded(
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       '${plan.title} Prepaid',
@@ -402,10 +404,13 @@ class _RemoveAdsPaywallSheetState extends State<RemoveAdsPaywallSheet> {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (plan.badge != null) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -428,30 +433,31 @@ class _RemoveAdsPaywallSheetState extends State<RemoveAdsPaywallSheet> {
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
 
-              // Price
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: plan.price,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.3,
-                      ),
+              // Price & Billing Period (Stacked layout, right-aligned)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    plan.price,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.3,
                     ),
-                    TextSpan(
-                      text: ' ${plan.billingPeriod}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
-                      ),
+                  ),
+                  Text(
+                    plan.billingPeriod.trim(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textSecondary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),

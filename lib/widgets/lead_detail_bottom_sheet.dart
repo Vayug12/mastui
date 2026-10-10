@@ -251,7 +251,7 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
       top: false,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.90,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -381,13 +381,14 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
 
             const Divider(height: 16, color: AppColors.divider),
 
-            // Scrollable Content
-            Expanded(
+            // Scrollable Content (hug-content via Flexible loose)
+            Flexible(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Business / Title Name (Selectable, Full text, no truncation)

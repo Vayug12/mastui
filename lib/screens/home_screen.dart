@@ -15,7 +15,6 @@ import '../services/subscription_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/lead_card.dart';
 import '../widgets/remove_ads_capsule.dart';
-import '../widgets/remove_ads_paywall_sheet.dart';
 import 'history_screen.dart';
 
 /// Main Lead Generation Agent Screen.
@@ -1014,6 +1013,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         actions: [
           const RemoveAdsCapsule(),
           PopupMenuButton<String>(
+            padding: const EdgeInsets.fromLTRB(5, 8, 8, 8),
+            style: IconButton.styleFrom(
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             icon: const Icon(
               Icons.more_vert_rounded,
               size: 22,
