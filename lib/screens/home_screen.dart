@@ -1314,6 +1314,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 6),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.card,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppColors.divider,
+                                    width: 1,
+                                  ),
+                                  boxShadow: AppShadows.softCard,
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(20),
+                                    onTap: () => AppReviewService.instance.openStoreListing(),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.chat_bubble_outline_rounded,
+                                            size: 11,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Feedback',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColors.textSecondary,
+                                              letterSpacing: -0.1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ],
                         ),
