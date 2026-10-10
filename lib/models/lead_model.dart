@@ -1,3 +1,5 @@
+import '../utils/lead_sanitizer.dart';
+
 /// Structured lead representation discovered across public profiles and directories.
 class Lead {
   final String id;
@@ -46,10 +48,60 @@ class Lead {
       (email != null && email!.isNotEmpty) ||
       (phone != null && phone!.isNotEmpty);
 
-  String get displayName =>
-      businessName != null && businessName!.isNotEmpty
-          ? businessName!
-          : (name.isNotEmpty ? name : 'Business Lead');
+  /// Primary clean display title (e.g. "Katiliana" or "Sugardot" or "Sharma Dental Clinic")
+  /// Automatically strips search engine breadcrumbs like "//www. instagram . com >"
+  /// and ignores platform junk like "Instagram https".
+  String get displayName {
+    final cleanBiz = LeadSanitizer.cleanTitle(businessName);
+    final cleanN = LeadSanitizer.cleanTitle(name);
+
+    if (cleanBiz.isNotEmpty && !LeadSanitizer.isPlatformJunk(cleanBiz)) {
+      final parsed = LeadSanitizer.parseNameAndHandle(
+        cleanBiz,
+        fallbackHandle: cleanN.isNotEmpty && !LeadSanitizer.isPlatformJunk(cleanN) ? cleanN : null,
+      );
+      return parsed.$1;
+    }
+
+    if (cleanN.isNotEmpty && !LeadSanitizer.isPlatformJunk(cleanN)) {
+      final parsed = LeadSanitizer.parseNameAndHandle(cleanN);
+      return parsed.$1;
+    }
+
+    return 'Business Lead';
+  }
+
+  /// Secondary subtitle (e.g. "@katyta__b", "@sugardotsolutions", or Contact Person name).
+  /// Returns null if identical to displayName, empty, or platform junk.
+  String? get secondaryDisplayName {
+    final cleanBiz = LeadSanitizer.cleanTitle(businessName);
+    final cleanN = LeadSanitizer.cleanTitle(name);
+
+    if (cleanBiz.isNotEmpty && !LeadSanitizer.isPlatformJunk(cleanBiz)) {
+      final parsed = LeadSanitizer.parseNameAndHandle(
+        cleanBiz,
+        fallbackHandle: cleanN.isNotEmpty && !LeadSanitizer.isPlatformJunk(cleanN) ? cleanN : null,
+      );
+      if (parsed.$2 != null && parsed.$2 != displayName && !LeadSanitizer.isPlatformJunk(parsed.$2)) {
+        return parsed.$2;
+      }
+      if (cleanN.isNotEmpty && cleanN != displayName && !LeadSanitizer.isPlatformJunk(cleanN)) {
+        return cleanN;
+      }
+    }
+
+    if (cleanN.isNotEmpty && !LeadSanitizer.isPlatformJunk(cleanN)) {
+      final parsed = LeadSanitizer.parseNameAndHandle(cleanN);
+      if (parsed.$2 != null && parsed.$2 != displayName && !LeadSanitizer.isPlatformJunk(parsed.$2)) {
+        return parsed.$2;
+      }
+    }
+
+    return null;
+  }
+
+  /// Whether lead has a valid, distinct external company website (not social profile or duplicate).
+  bool get hasDistinctWebsite => LeadSanitizer.isDistinctWebsite(website, profileUrl);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -118,15 +170,19 @@ class Lead {
       return '"$clean"';
     }
 
+    final contactPerson = secondaryDisplayName ??
+        (name != displayName && !LeadSanitizer.isPlatformJunk(name) ? name : '');
+    final cleanWebsite = hasDistinctWebsite ? website : '';
+
     return [
       escape(displayName),
-      escape(name),
+      escape(contactPerson),
       escape(email),
       escape(phone),
       escape(platform),
       escape(location),
       escape(niche),
-      escapeUrl(website),
+      escapeUrl(cleanWebsite),
       escapeUrl(profileUrl),
       escape(decisionMakerName),
       escape(decisionMakerRole),

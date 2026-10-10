@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../utils/lead_sanitizer.dart';
 import 'in_app_web_search_service.dart';
 
 /// Raw search result extracted from search engines (Yahoo, Bing, DuckDuckGo).
@@ -209,8 +210,7 @@ class DuckDuckGoSearchService {
       final rawTitleText = h3Match?.group(1) ?? rawTitle;
 
       final cleanUrl = _cleanYahooUrl(rawUrl);
-      var cleanTitle = _cleanHtml(rawTitleText);
-      cleanTitle = cleanTitle.replaceAll(RegExp(r'^(?:Instagram|LinkedIn|Facebook|X|Twitter)?\s*(?:https?:\/\/)?[a-zA-Z0-9.-]+\s*›\s*[^\s]+\s*', caseSensitive: false), '').trim();
+      final cleanTitle = LeadSanitizer.cleanTitle(_cleanHtml(rawTitleText));
       final cleanSnippet = _cleanHtml(rawSnippet);
 
       if (cleanTitle.isNotEmpty && cleanSnippet.isNotEmpty) {
@@ -234,7 +234,7 @@ class DuckDuckGoSearchService {
         final rawSnippet = snippets[i].group(1) ?? '';
 
         final cleanUrl = _cleanYahooUrl(rawUrl);
-        final cleanTitle = _cleanHtml(rawTitle);
+        final cleanTitle = LeadSanitizer.cleanTitle(_cleanHtml(rawTitle));
         final cleanSnippet = _cleanHtml(rawSnippet);
 
         if (cleanTitle.isNotEmpty && cleanSnippet.isNotEmpty) {
@@ -312,7 +312,7 @@ class DuckDuckGoSearchService {
       final rawSnippet = snippetMatch?.group(1) ?? '';
 
       final cleanUrl = _cleanBingUrl(rawUrl);
-      final cleanTitle = _cleanHtml(rawTitle);
+      final cleanTitle = LeadSanitizer.cleanTitle(_cleanHtml(rawTitle));
       final cleanSnippet = _cleanHtml(rawSnippet);
 
       if (cleanTitle.isNotEmpty && cleanSnippet.isNotEmpty) {
@@ -336,7 +336,7 @@ class DuckDuckGoSearchService {
         final rawSnippet = i < snippets.length ? (snippets[i].group(1) ?? '') : '';
 
         final cleanUrl = _cleanBingUrl(rawUrl);
-        final cleanTitle = _cleanHtml(rawTitle);
+        final cleanTitle = LeadSanitizer.cleanTitle(_cleanHtml(rawTitle));
         final cleanSnippet = _cleanHtml(rawSnippet);
 
         if (cleanTitle.isNotEmpty && cleanUrl.isNotEmpty) {
@@ -416,7 +416,7 @@ class DuckDuckGoSearchService {
       final rawSnippet = i < snippets.length ? (snippets[i].group(1) ?? '') : '';
 
       final cleanUrl = _cleanDdgUrl(rawUrl);
-      final cleanTitle = _cleanHtml(rawTitle);
+      final cleanTitle = LeadSanitizer.cleanTitle(_cleanHtml(rawTitle));
       final cleanSnippet = _cleanHtml(rawSnippet);
 
       if (cleanTitle.isNotEmpty && cleanUrl.isNotEmpty) {

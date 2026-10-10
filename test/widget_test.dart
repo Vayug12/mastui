@@ -93,12 +93,12 @@ void main() {
     // Close/delete button is present
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
-    // Email, phone, website, and 1-click WhatsApp are properly shown
+    // Email, phone, and 1-click WhatsApp are properly shown; website URL is removed from card body
     expect(find.text('contact@sdcbusiness.com'), findsOneWidget);
     expect(find.text('+919876543210'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
-    expect(find.text('https://sdcbusiness.com'), findsOneWidget);
-    expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget); // website open iconbutton
+    expect(find.text('https://sdcbusiness.com'), findsNothing);
+    expect(find.byIcon(Icons.open_in_new_rounded), findsNothing);
 
     expect(tester.takeException(), isNull);
   });

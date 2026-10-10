@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import '../models/lead_model.dart';
+import '../utils/lead_sanitizer.dart';
 import 'cloudflare_ai_service.dart';
 import 'duckduckgo_search_service.dart';
 
@@ -649,31 +650,28 @@ class LeadDiscoveryService {
   );
 
   (String, String?) _parseNameAndBusiness(String title, String platform) {
-    var cleanTitle = title
-        .replaceAll(RegExp(r'\s*-\s*Instagram\s*.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\s*\|\s*LinkedIn\s*.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\s*-\s*LinkedIn\s*.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\s*-\s*Facebook\s*.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\s*-\s*X\s*.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\s*-\s*Twitter\s*.*', caseSensitive: false), '')
-        .trim();
+    // 1. Strip search engine breadcrumb prefixes and platform suffixes
+    var cleanTitle = LeadSanitizer.cleanTitle(title);
 
+    // 2. Extract handle parenthetical if present
+    final handleMatch = RegExp(r'\(@([a-zA-Z0-9._]+)\)').firstMatch(cleanTitle);
+    String? handle = handleMatch != null ? '@${handleMatch.group(1)}' : null;
     cleanTitle = cleanTitle.replaceAll(RegExp(r'\(@[a-zA-Z0-9._]+\)'), '').trim();
     cleanTitle = cleanTitle.replaceAll(RegExp(r'•.*'), '').trim();
 
     final parts = cleanTitle
-        .split(RegExp(r'\s*[-|–:]\s*'))
-        .map((p) => p.trim())
-        .where((p) => p.isNotEmpty)
+        .split(RegExp(r'\s*[-|–—:]\s*'))
+        .map((p) => LeadSanitizer.cleanTitle(p))
+        .where((p) => p.isNotEmpty && !LeadSanitizer.isPlatformJunk(p))
         .toList();
 
     if (parts.isEmpty) {
-      return ('Business Lead', null);
+      return (handle ?? 'Business Lead', null);
     }
 
     if (parts.length == 1) {
-      final single = parts[0];
-      return (single.isNotEmpty ? single : 'Business Lead', null);
+      final parsed = LeadSanitizer.parseNameAndHandle(parts[0], fallbackHandle: handle);
+      return (parsed.$1, parsed.$2);
     }
 
     String? detectedName;
@@ -704,18 +702,23 @@ class LeadDiscoveryService {
       }
     }
 
-    final finalName = detectedName ?? (detectedBusiness ?? parts[0]);
+    var finalName = detectedName ?? (detectedBusiness ?? parts[0]);
     var finalBusiness = detectedBusiness;
 
-    // Avoid setting businessName if it's identical to name or matches a pure job role
+    // Avoid setting businessName if it's identical to name, matches a pure job role, or is platform junk
     if (finalBusiness != null) {
       if (finalBusiness.toLowerCase() == finalName.toLowerCase() ||
-          _jobRoleRegex.hasMatch(finalBusiness)) {
+          _jobRoleRegex.hasMatch(finalBusiness) ||
+          LeadSanitizer.isPlatformJunk(finalBusiness)) {
         finalBusiness = null;
       }
     }
 
-    return (finalName.isNotEmpty ? finalName : 'Business Lead', finalBusiness);
+    if (LeadSanitizer.isPlatformJunk(finalName)) {
+      finalName = handle ?? 'Business Lead';
+    }
+
+    return (finalName.isNotEmpty ? finalName : 'Business Lead', finalBusiness ?? handle);
   }
 
   /// Validates whether the search result matches the requested location filter.

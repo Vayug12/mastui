@@ -186,7 +186,7 @@ class PdfExportService {
         );
         final founderStr = (lead.decisionMakerName != null && lead.decisionMakerName!.isNotEmpty)
             ? '${lead.decisionMakerName!}${lead.decisionMakerRole != null ? ' (${lead.decisionMakerRole})' : ''}'
-            : (lead.name.isNotEmpty && lead.name != lead.displayName ? lead.name : '-');
+            : (lead.secondaryDisplayName != null ? lead.secondaryDisplayName! : '-');
         final founderLine = _escapePdfText(founderStr, maxLength: 34);
         content.writeln(
           'BT /F1 7 Tf 0.50 0.50 0.50 rg ${col1X + 8} ${rowBottomY + 6} Td ($founderLine) Tj ET',
@@ -271,22 +271,21 @@ class PdfExportService {
           'BT /F1 7.5 Tf 0.25 0.25 0.25 rg ${col4X + 8} ${rowBottomY + 18} Td ($locationLine) Tj ET',
         );
 
-        final targetWebUrl = (lead.website != null && lead.website!.trim().isNotEmpty)
-            ? lead.website!.trim()
-            : (lead.profileUrl.trim().isNotEmpty ? lead.profileUrl.trim() : '');
-        final webLine = _escapePdfText(targetWebUrl.isNotEmpty ? targetWebUrl : '-', maxLength: 28);
+        // Only display distinct company website if present; do not duplicate profileUrl
+        final distinctWeb = lead.hasDistinctWebsite ? lead.website!.trim() : '';
+        final webLine = _escapePdfText(distinctWeb.isNotEmpty ? distinctWeb : '-', maxLength: 28);
         content.writeln(
           'BT /F1 7 Tf 0.50 0.50 0.50 rg ${col4X + 8} ${rowBottomY + 6} Td ($webLine) Tj ET',
         );
 
-        if (targetWebUrl.isNotEmpty) {
+        if (distinctWeb.isNotEmpty) {
           currentAnnots.add(
             _PdfLinkAnnot(
               llx: col4X + 6,
               lly: rowBottomY + 4,
               urx: col4X + 125,
               ury: rowBottomY + 16,
-              uri: _ensureHttp(targetWebUrl),
+              uri: _ensureHttp(distinctWeb),
             ),
           );
         }

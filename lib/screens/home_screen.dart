@@ -5,11 +5,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_links.dart';
 import '../models/lead_model.dart';
+import '../models/search_history_session.dart';
+import '../services/ad_service.dart';
 import '../services/app_review_service.dart';
 import '../services/lead_discovery_service.dart';
 import '../services/lead_storage_service.dart';
+import '../services/search_history_service.dart';
+import '../services/subscription_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/lead_card.dart';
+import '../widgets/remove_ads_capsule.dart';
+import '../widgets/remove_ads_paywall_sheet.dart';
+import 'history_screen.dart';
 
 /// Main Lead Generation Agent Screen.
 /// Strictly follows Apple HIG + Linear + ChatGPT minimal design principles (mastui/design.md).
@@ -205,6 +212,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           : 'Searching verified leads for $niche...';
     });
 
+    if (!isLoadMore && !SubscriptionService.instance.isAdFree) {
+      AdService.instance.showRewardedAd();
+    }
+
     final platforms = _selectedPlatform == 'All'
         ? ['Instagram', 'LinkedIn', 'Facebook', 'X']
         : [_selectedPlatform];
@@ -288,6 +299,53 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _persistCurrentLeads() async {
     await LeadStorageService.instance.saveLeads(_leads);
+    if (_leads.isNotEmpty) {
+      final activeNiche = _searchedNiche.isNotEmpty
+          ? _searchedNiche
+          : _nicheController.text.trim();
+      final activeLocation = _locationController.text.trim().isNotEmpty
+          ? _locationController.text.trim()
+          : null;
+      if (activeNiche.isNotEmpty) {
+        await SearchHistoryService.instance.recordSearchSession(
+          niche: activeNiche,
+          location: activeLocation,
+          leads: _leads,
+        );
+      }
+    }
+  }
+
+  Future<void> _openHistory() async {
+    final restoredSession =
+        await Navigator.of(context).push<SearchHistorySession>(
+      MaterialPageRoute(
+        builder: (context) => const HistoryScreen(),
+      ),
+    );
+
+    if (restoredSession != null && mounted) {
+      _restoreSession(restoredSession);
+    }
+  }
+
+  void _restoreSession(SearchHistorySession session) {
+    setState(() {
+      _nicheController.text = session.niche;
+      _locationController.text = session.location ?? '';
+      _searchedNiche = session.niche;
+      _leads.clear();
+      _leads.addAll(session.leads);
+      _currentPage = 1;
+      _isLoadingMore = false;
+      _searchStatus = 'Restored ${session.leads.length} leads from history.';
+      if (!_isSearchBarVisible) {
+        _isSearchBarVisible = true;
+        _searchBarController.forward();
+      }
+    });
+    _persistCurrentLeads();
+    _showToast('Restored ${session.leads.length} leads from history');
   }
 
   void _clearAllLeads() {
@@ -954,37 +1012,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         actions: [
-          Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                tooltip: 'Filters',
-                splashRadius: 22,
-                icon: Icon(
-                  Icons.tune_rounded,
-                  size: 22,
-                  color: activeFilters > 0
-                      ? AppColors.secondaryGreen
-                      : AppColors.textPrimary,
-                ),
-                onPressed: _openFilterBottomSheet,
-              ),
-              if (activeFilters > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: AppColors.secondaryGreen,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          const RemoveAdsCapsule(),
           PopupMenuButton<String>(
             icon: const Icon(
               Icons.more_vert_rounded,
@@ -998,8 +1026,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               side: const BorderSide(color: AppColors.divider),
             ),
             onSelected: (value) {
-              if (value == 'copy_emails') {
-                _copyAllEmails();
+              if (value == 'history') {
+                _openHistory();
               } else if (value == 'rate_us') {
                 AppReviewService.instance.openStoreListing();
               } else if (value == 'privacy_policy') {
@@ -1011,19 +1039,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'copy_emails',
-                enabled: _leads.isNotEmpty,
-                child: const Row(
+              const PopupMenuItem(
+                value: 'history',
+                child: Row(
                   children: [
                     Icon(
-                      Icons.mail_outline_rounded,
+                      Icons.history_rounded,
                       size: 18,
                       color: AppColors.textPrimary,
                     ),
                     SizedBox(width: 12),
                     Text(
-                      'Copy Emails',
+                      'History',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -1038,13 +1065,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: const Row(
                   children: [
                     Icon(
-                      Icons.star_outline_rounded,
+                      Icons.feedback_outlined,
                       size: 18,
                       color: AppColors.secondaryGreen,
                     ),
                     SizedBox(width: 12),
                     Text(
-                      'Rate Us',
+                      'Feedback',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -1159,19 +1186,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               size: 20,
                               color: AppColors.textMuted,
                             ),
-                            suffixIcon: _nicheController.text.isNotEmpty
-                                ? IconButton(
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_nicheController.text.isNotEmpty)
+                                  IconButton(
                                     icon: const Icon(
                                       Icons.close_rounded,
                                       size: 18,
                                     ),
                                     color: AppColors.textMuted,
+                                    splashRadius: 18,
                                     onPressed: () {
                                       _nicheController.clear();
                                       setState(() {});
                                     },
-                                  )
-                                : null,
+                                  ),
+                                Stack(
+                                  alignment: Alignment.center,
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Filters',
+                                      splashRadius: 18,
+                                      icon: Icon(
+                                        Icons.tune_rounded,
+                                        size: 20,
+                                        color: activeFilters > 0
+                                            ? AppColors.secondaryGreen
+                                            : AppColors.textPrimary,
+                                      ),
+                                      onPressed: _openFilterBottomSheet,
+                                    ),
+                                    if (activeFilters > 0)
+                                      Positioned(
+                                        top: 10,
+                                        right: 10,
+                                        child: Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.secondaryGreen,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                            ),
                           ),
                           onChanged: (_) => setState(() {}),
                         ),

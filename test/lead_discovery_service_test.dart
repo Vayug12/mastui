@@ -3,9 +3,73 @@ import 'package:mastui/models/lead_model.dart';
 import 'package:mastui/services/duckduckgo_search_service.dart';
 import 'package:mastui/services/lead_discovery_service.dart';
 import 'package:mastui/services/pdf_export_service.dart';
+import 'package:mastui/utils/lead_sanitizer.dart';
 
 void main() {
   group('Lead Model Tests', () {
+    test('LeadSanitizer removes breadcrumb URLs and platform junk properly', () {
+      expect(
+        LeadSanitizer.cleanTitle('//www. instagram . com > katyta__b Katiliana - Instagram https'),
+        'katyta__b Katiliana',
+      );
+      expect(
+        LeadSanitizer.cleanTitle('//www. instagram . com > sugardotsolutions Sugardot'),
+        'sugardotsolutions Sugardot',
+      );
+      expect(
+        LeadSanitizer.cleanTitle('www.instagram.com › katyta__b - Instagram'),
+        'katyta__b',
+      );
+      expect(LeadSanitizer.isPlatformJunk('Instagram https'), isTrue);
+      expect(LeadSanitizer.isPlatformJunk('Instagram'), isTrue);
+      expect(LeadSanitizer.isPlatformJunk('Sugardot'), isFalse);
+
+      final parsed = LeadSanitizer.parseNameAndHandle('//www. instagram . com > katyta__b Katiliana');
+      expect(parsed.$1, 'Katiliana');
+      expect(parsed.$2, '@katyta__b');
+
+      final parsed2 = LeadSanitizer.parseNameAndHandle('//www. instagram . com > sugardotsolutions Sugardot');
+      expect(parsed2.$1, 'Sugardot');
+      expect(parsed2.$2, '@sugardotsolutions');
+    });
+
+    test('Lead model dynamically cleans raw breadcrumbs in displayName and secondaryDisplayName', () {
+      final rawLead = Lead(
+        id: 'raw-1',
+        name: 'Instagram https',
+        businessName: '//www. instagram . com > sugardotsolutions Sugardot',
+        platform: 'Instagram',
+        profileUrl: 'https://instagram.com/sugardotsolutions',
+        extractedAt: DateTime.now(),
+      );
+
+      expect(rawLead.displayName, 'Sugardot');
+      expect(rawLead.secondaryDisplayName, '@sugardotsolutions');
+      expect(rawLead.hasDistinctWebsite, isFalse);
+    });
+
+    test('Lead model detects distinct company websites and filters social duplicates', () {
+      final leadSocialWeb = Lead(
+        id: '2',
+        name: 'Katiliana',
+        website: 'https://instagram.com/katyta__b',
+        platform: 'Instagram',
+        profileUrl: 'https://instagram.com/katyta__b',
+        extractedAt: DateTime.now(),
+      );
+      expect(leadSocialWeb.hasDistinctWebsite, isFalse);
+
+      final leadRealWeb = Lead(
+        id: '3',
+        name: 'Katiliana',
+        website: 'https://katilianafashion.com',
+        platform: 'Instagram',
+        profileUrl: 'https://instagram.com/katyta__b',
+        extractedAt: DateTime.now(),
+      );
+      expect(leadRealWeb.hasDistinctWebsite, isTrue);
+    });
+
     test('Lead model serializes and deserializes properly', () {
       final lead = Lead(
         id: 'lead-123',
@@ -112,10 +176,9 @@ void main() {
       final pdfString = String.fromCharCodes(pdfBytes);
       expect(pdfString.startsWith('%PDF-1.4'), isTrue);
       expect(pdfString.contains('%%EOF'), isTrue);
-      expect(pdfString.contains('/Count 3'), isTrue); // 25 leads across 3 pages (9 + 10 + 6)
-      expect(pdfString.contains('Page 1 of 3'), isTrue);
-      expect(pdfString.contains('Page 2 of 3'), isTrue);
-      expect(pdfString.contains('Page 3 of 3'), isTrue);
+      expect(pdfString.contains('/Count 2'), isTrue); // 25 leads across 2 pages (19 + 6)
+      expect(pdfString.contains('Page 1 of 2'), isTrue);
+      expect(pdfString.contains('Page 2 of 2'), isTrue);
     });
   });
 

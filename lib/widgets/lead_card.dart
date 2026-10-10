@@ -158,8 +158,7 @@ class _LeadCardState extends State<LeadCard> {
     final hasEmail = lead.email != null && lead.email!.trim().isNotEmpty;
     final hasPhone = lead.phone != null && lead.phone!.trim().isNotEmpty;
     final hasWhatsApp = _getWhatsAppDigits(lead.phone) != null;
-    final hasWebsite = lead.website != null && lead.website!.trim().isNotEmpty;
-    final hasContactInfo = hasEmail || hasPhone || hasWebsite;
+    final hasContactInfo = hasEmail || hasPhone;
     final hasDecisionMaker = lead.decisionMakerName != null && lead.decisionMakerName!.isNotEmpty;
 
     return Container(
@@ -185,7 +184,7 @@ class _LeadCardState extends State<LeadCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Row: Clickable Platform Badge (opens profile) + Expand Cue + Delete button
+                // Header Row: Clickable Platform Badge (opens profile) + Delete button
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -233,13 +232,7 @@ class _LeadCardState extends State<LeadCard> {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: AppColors.textDisabled,
-                    ),
-                    if (widget.onDelete != null) ...[
-                      const SizedBox(width: 2),
+                    if (widget.onDelete != null)
                       IconButton(
                         icon: const Icon(Icons.close_rounded, size: 16),
                         color: AppColors.textMuted,
@@ -249,12 +242,11 @@ class _LeadCardState extends State<LeadCard> {
                         tooltip: 'Remove',
                         onPressed: widget.onDelete,
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 10),
 
-          // Business / Title Name
+          // Business / Clean Display Name
           Text(
             lead.displayName,
             maxLines: 2,
@@ -267,12 +259,12 @@ class _LeadCardState extends State<LeadCard> {
             ),
           ),
 
-          if (lead.businessName != null &&
-              lead.name.isNotEmpty &&
-              lead.name != lead.businessName) ...[
+          if (lead.secondaryDisplayName != null) ...[
             const SizedBox(height: 2),
             Text(
-              lead.name,
+              lead.secondaryDisplayName!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
@@ -420,49 +412,7 @@ class _LeadCardState extends State<LeadCard> {
             ),
           ],
 
-          // Contact Items: Website (only shown if present with IconButton link)
-          if (hasWebsite) ...[
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.language_rounded,
-                    size: 15,
-                    color: AppColors.secondaryBlue,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _launchUrl(lead.website!.trim()),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Text(
-                        lead.website!.trim(),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
-                          decoration: TextDecoration.underline,
-                          decorationColor: AppColors.divider,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.open_in_new_rounded, size: 15),
-                    color: AppColors.textMuted,
-                    padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                    splashRadius: 14,
-                    tooltip: 'Open website',
-                    onPressed: () => _launchUrl(lead.website!.trim()),
-                  ),
-                ],
-              ),
-            ),
-          ],
+
 
           // Decision Maker / Founder Section (Method 2 On-Demand CEO Enrichment)
           const SizedBox(height: 10),

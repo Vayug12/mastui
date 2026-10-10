@@ -7,6 +7,7 @@ import 'screens/main_shell.dart';
 import 'services/ad_service.dart';
 import 'services/connection_service.dart';
 import 'services/in_app_web_search_service.dart';
+import 'services/subscription_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/connection_banner.dart';
 
@@ -14,8 +15,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ConnectionService.instance.start();
 
-  // Start the ads SDK without blocking first frame.
+  // Start the ads SDK and subscription service without blocking first frame.
   unawaited(AdService.instance.init());
+  unawaited(SubscriptionService.instance.init());
   // Pre-initialize in-app web search browser engine
   unawaited(InAppWebSearchService.instance.initialize());
 

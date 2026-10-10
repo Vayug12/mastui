@@ -9,7 +9,7 @@ import '../services/duckduckgo_search_service.dart';
 import '../services/email_verification_service.dart';
 import '../theme/app_colors.dart';
 
-/// Modal bottom sheet displaying complete, untruncated details of a lead.
+/// Modal bottom sheet displaying clean, focused details of a lead.
 /// Adheres strictly to mastui/design.md (Apple HIG / ChatGPT monochrome elegance).
 class LeadDetailBottomSheet extends StatefulWidget {
   final Lead lead;
@@ -104,32 +104,13 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
     }
   }
 
-  void _copyToClipboard(String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$label copied to clipboard',
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
-        duration: const Duration(seconds: 2),
-        backgroundColor: AppColors.textPrimary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-
   void _shareLead() {
     final buffer = StringBuffer();
     buffer.writeln('📋 ${_currentLead.displayName}');
-    if (_currentLead.businessName != null &&
-        _currentLead.name.isNotEmpty &&
-        _currentLead.name != _currentLead.businessName) {
-      buffer.writeln('Contact: ${_currentLead.name}');
+    if (_currentLead.secondaryDisplayName != null) {
+      buffer.writeln(_currentLead.secondaryDisplayName!.startsWith('@')
+          ? 'Handle: ${_currentLead.secondaryDisplayName}'
+          : 'Contact: ${_currentLead.secondaryDisplayName}');
     }
     if (_currentLead.email != null && _currentLead.email!.isNotEmpty) {
       buffer.writeln('Email: ${_currentLead.email}');
@@ -137,8 +118,11 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
     if (_currentLead.phone != null && _currentLead.phone!.isNotEmpty) {
       buffer.writeln('Phone: ${_currentLead.phone}');
     }
-    if (_currentLead.website != null && _currentLead.website!.isNotEmpty) {
+    if (_currentLead.hasDistinctWebsite) {
       buffer.writeln('Website: ${_currentLead.website}');
+    }
+    if (_currentLead.profileUrl.isNotEmpty) {
+      buffer.writeln('Profile: ${_currentLead.profileUrl}');
     }
     if (_currentLead.location != null && _currentLead.location!.isNotEmpty) {
       buffer.writeln('Location: ${_currentLead.location}');
@@ -251,8 +235,11 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
     final lead = _currentLead;
     final hasEmail = lead.email != null && lead.email!.trim().isNotEmpty;
     final hasPhone = lead.phone != null && lead.phone!.trim().isNotEmpty;
+    final hasAlternativeEmails =
+        lead.alternativeEmails != null && lead.alternativeEmails!.isNotEmpty;
+    final hasContactInfo = hasEmail || hasPhone || hasAlternativeEmails;
     final hasWhatsApp = _getWhatsAppDigits(lead.phone) != null;
-    final hasWebsite = lead.website != null && lead.website!.trim().isNotEmpty;
+    final hasWebsite = lead.hasDistinctWebsite;
     final hasProfile = lead.profileUrl.isNotEmpty;
     final hasBio = lead.bioSnippet != null && lead.bioSnippet!.trim().isNotEmpty;
     final hasLocation = lead.location != null && lead.location!.trim().isNotEmpty;
@@ -284,7 +271,7 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Top Header: Platform Tag + Extracted date + Share & Close Buttons
+            // Top Header: Platform Tag + Distinct Website Tag + Share & Close Buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
@@ -325,6 +312,52 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                       ),
                     ),
                   ),
+
+                  // Website Chip (shown alongside platform if distinct website exists)
+                  if (hasWebsite) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => _launchUrl(lead.website!.trim()),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: AppColors.divider, width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.language_rounded,
+                              size: 12,
+                              color: AppColors.secondaryBlue,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Website',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            SizedBox(width: 3),
+                            Icon(
+                              Icons.arrow_outward_rounded,
+                              size: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
                   const Spacer(),
                   // Share Button
                   IconButton(
@@ -357,7 +390,7 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Business / Title Name (Selectable, Full text, no ellipsis)
+                    // Business / Title Name (Selectable, Full text, no truncation)
                     SelectableText(
                       lead.displayName,
                       style: const TextStyle(
@@ -369,12 +402,12 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                       ),
                     ),
 
-                    if (lead.businessName != null &&
-                        lead.name.isNotEmpty &&
-                        lead.name != lead.businessName) ...[
+                    if (lead.secondaryDisplayName != null) ...[
                       const SizedBox(height: 4),
                       SelectableText(
-                        'Contact: ${lead.name}',
+                        lead.secondaryDisplayName!.startsWith('@')
+                            ? lead.secondaryDisplayName!
+                            : 'Contact: ${lead.secondaryDisplayName!}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -406,11 +439,10 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                       ),
                     ],
 
-                    const SizedBox(height: 12),
-
-                    // Full Bio Snippet / Description Section
+                    // Full Bio Snippet / Description Section (clean & selectable, no redundant copy button)
                     if (hasBio) ...[
-                      _buildSectionTitle('About / Description'),
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('About'),
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
@@ -420,163 +452,134 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.divider, width: 1),
                         ),
+                        child: SelectableText(
+                          lead.bioSnippet!.trim(),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: AppColors.textPrimary,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Contact Details Section (Strictly hidden if no direct contact info available)
+                    if (hasContactInfo) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('Contact Details'),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.divider, width: 1),
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SelectableText(
-                              lead.bioSnippet!.trim(),
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                color: AppColors.textPrimary,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: InkWell(
-                                onTap: () => _copyToClipboard(
-                                    lead.bioSnippet!.trim(), 'Description'),
-                                borderRadius: BorderRadius.circular(6),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 3),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(
-                                        Icons.copy_rounded,
-                                        size: 12,
-                                        color: AppColors.textMuted,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Copy text',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                            if (hasEmail)
+                              _buildContactRow(
+                                icon: Icons.mail_outline_rounded,
+                                iconColor: AppColors.secondaryBlue,
+                                title: 'Email',
+                                value: lead.email!.trim(),
+                                badge: _EmailVerifiedBadge(
+                                  email: lead.email!.trim(),
+                                  isWorkEmail: lead.isWorkEmail,
+                                  emailStatus: lead.emailStatus,
                                 ),
+                                actions: [
+                                  IconButton(
+                                    icon: const Icon(Icons.send_rounded,
+                                        size: 16),
+                                    color: AppColors.secondaryBlue,
+                                    tooltip: 'Send Email',
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 28, minHeight: 28),
+                                    splashRadius: 16,
+                                    onPressed: () =>
+                                        _sendEmail(lead.email!.trim()),
+                                  ),
+                                ],
                               ),
-                            ),
+                            if (hasAlternativeEmails) ...[
+                              for (final altEmail in lead.alternativeEmails!) ...[
+                                const Divider(
+                                    height: 16, color: AppColors.divider),
+                                _buildContactRow(
+                                  icon: Icons.alternate_email_rounded,
+                                  iconColor: AppColors.secondaryBlue,
+                                  title: 'Alternative Email',
+                                  value: altEmail.trim(),
+                                  actions: [
+                                    IconButton(
+                                      icon: const Icon(Icons.send_rounded,
+                                          size: 16),
+                                      color: AppColors.secondaryBlue,
+                                      tooltip: 'Send Email',
+                                      padding: const EdgeInsets.all(4),
+                                      constraints: const BoxConstraints(
+                                          minWidth: 28, minHeight: 28),
+                                      splashRadius: 16,
+                                      onPressed: () =>
+                                          _sendEmail(altEmail.trim()),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                            if (hasPhone) ...[
+                              if (hasEmail || hasAlternativeEmails)
+                                const Divider(
+                                    height: 16, color: AppColors.divider),
+                              _buildContactRow(
+                                icon: Icons.phone_outlined,
+                                iconColor: AppColors.secondaryGreen,
+                                title: 'Phone',
+                                value: lead.phone!.trim(),
+                                actions: [
+                                  IconButton(
+                                    icon: const Icon(Icons.call_rounded,
+                                        size: 16),
+                                    color: AppColors.secondaryGreen,
+                                    tooltip: 'Call',
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 28, minHeight: 28),
+                                    splashRadius: 16,
+                                    onPressed: () =>
+                                        _callPhone(lead.phone!.trim()),
+                                  ),
+                                  if (hasWhatsApp) ...[
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      icon: const Icon(
+                                          Icons.chat_bubble_outline_rounded,
+                                          size: 16),
+                                      color: AppColors.secondaryGreen,
+                                      tooltip: 'WhatsApp',
+                                      padding: const EdgeInsets.all(4),
+                                      constraints: const BoxConstraints(
+                                          minWidth: 28, minHeight: 28),
+                                      splashRadius: 16,
+                                      onPressed: () =>
+                                          _openWhatsApp(lead.phone!),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
 
-                    // Contact Details Section
-                    _buildSectionTitle('Contact Details'),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.secondaryBackground,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.divider, width: 1),
-                      ),
-                      child: Column(
-                        children: [
-                          if (hasEmail)
-                            _buildContactRow(
-                              icon: Icons.mail_outline_rounded,
-                              iconColor: AppColors.secondaryBlue,
-                              title: 'Email',
-                              value: lead.email!.trim(),
-                              badge: _EmailVerifiedBadge(
-                                email: lead.email!.trim(),
-                                isWorkEmail: lead.isWorkEmail,
-                                emailStatus: lead.emailStatus,
-                              ),
-                              onCopy: () => _copyToClipboard(
-                                  lead.email!.trim(), 'Email'),
-                              onAction: () => _sendEmail(lead.email!.trim()),
-                              actionTooltip: 'Send email',
-                              actionIcon: Icons.send_rounded,
-                            ),
-                          if (lead.alternativeEmails != null &&
-                              lead.alternativeEmails!.isNotEmpty) ...[
-                            for (final altEmail in lead.alternativeEmails!)
-                              _buildContactRow(
-                                icon: Icons.alternate_email_rounded,
-                                iconColor: AppColors.secondaryBlue,
-                                title: 'Alternative Email',
-                                value: altEmail.trim(),
-                                onCopy: () => _copyToClipboard(
-                                    altEmail.trim(), 'Alternative Email'),
-                                onAction: () => _sendEmail(altEmail.trim()),
-                                actionTooltip: 'Send email',
-                                actionIcon: Icons.send_rounded,
-                              ),
-                          ],
-                          if (hasPhone) ...[
-                            if (hasEmail) const Divider(height: 16, color: AppColors.divider),
-                            _buildContactRow(
-                              icon: Icons.phone_outlined,
-                              iconColor: AppColors.secondaryGreen,
-                              title: 'Phone',
-                              value: lead.phone!.trim(),
-                              onCopy: () => _copyToClipboard(
-                                  lead.phone!.trim(), 'Phone'),
-                              onAction: () => _callPhone(lead.phone!.trim()),
-                              actionTooltip: 'Call',
-                              actionIcon: Icons.call_rounded,
-                            ),
-                          ],
-                          if (hasWebsite) ...[
-                            if (hasEmail || hasPhone)
-                              const Divider(height: 16, color: AppColors.divider),
-                            _buildContactRow(
-                              icon: Icons.language_rounded,
-                              iconColor: AppColors.secondaryBlue,
-                              title: 'Website',
-                              value: lead.website!.trim(),
-                              onCopy: () => _copyToClipboard(
-                                  lead.website!.trim(), 'Website'),
-                              onAction: () => _launchUrl(lead.website!.trim()),
-                              actionTooltip: 'Open website',
-                              actionIcon: Icons.open_in_new_rounded,
-                            ),
-                          ],
-                          if (hasProfile) ...[
-                            if (hasEmail || hasPhone || hasWebsite)
-                              const Divider(height: 16, color: AppColors.divider),
-                            _buildContactRow(
-                              icon: Icons.account_circle_outlined,
-                              iconColor: AppColors.textSecondary,
-                              title: 'Profile URL',
-                              value: lead.profileUrl.trim(),
-                              onCopy: () => _copyToClipboard(
-                                  lead.profileUrl.trim(), 'Profile URL'),
-                              onAction: () => _launchUrl(lead.profileUrl.trim()),
-                              actionTooltip: 'Open profile',
-                              actionIcon: Icons.open_in_new_rounded,
-                            ),
-                          ],
-                          if (!hasEmail && !hasPhone && !hasWebsite && !hasProfile)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                'No direct contact details available',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: 16),
 
-                    const SizedBox(height: 20),
-
-                    // Decision Maker / Founder Section
-                    _buildSectionTitle('Decision Maker (Founder / CEO)'),
+                    // Decision Maker Section
+                    _buildSectionTitle('Decision Maker'),
                     const SizedBox(height: 8),
                     if (hasDecisionMaker) ...[
                       Container(
@@ -607,7 +610,8 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                                         ),
                                       ),
                                       Text(
-                                        lead.decisionMakerRole ?? 'Founder & CEO',
+                                        lead.decisionMakerRole ??
+                                            'Founder & CEO',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           color: AppColors.textSecondary,
@@ -656,59 +660,45 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                             if (lead.decisionMakerEmail != null &&
                                 lead.decisionMakerEmail!.trim().isNotEmpty) ...[
                               const SizedBox(height: 10),
-                              InkWell(
-                                onTap: () => _copyToClipboard(
-                                  lead.decisionMakerEmail!.trim(),
-                                  'Founder Email',
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: AppColors.divider, width: 1),
                                 ),
-                                borderRadius: BorderRadius.circular(6),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: AppColors.divider, width: 1),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.mail_outline_rounded,
-                                        size: 14,
-                                        color: AppColors.secondaryGreen,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          lead.decisionMakerEmail!.trim(),
-                                          style: const TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppColors.textPrimary,
-                                          ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.mail_outline_rounded,
+                                      size: 14,
+                                      color: AppColors.secondaryGreen,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SelectableText(
+                                        lead.decisionMakerEmail!.trim(),
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.textPrimary,
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(
-                                            Icons.send_rounded,
-                                            size: 14),
-                                        color: AppColors.secondaryGreen,
-                                        tooltip: 'Send Email',
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                            minWidth: 24, minHeight: 24),
-                                        onPressed: () => _sendEmail(
-                                            lead.decisionMakerEmail!.trim()),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.copy_rounded,
-                                        size: 13,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.send_rounded,
+                                          size: 14),
+                                      color: AppColors.secondaryGreen,
+                                      tooltip: 'Send Email',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                          minWidth: 24, minHeight: 24),
+                                      onPressed: () => _sendEmail(
+                                          lead.decisionMakerEmail!.trim()),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -716,70 +706,45 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
                         ),
                       ),
                     ] else ...[
-                      Container(
+                      // Clean minimal action button without marketing helper text
+                      SizedBox(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryBackground,
-                          borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: AppColors.divider, width: 1),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Discover the key Decision Maker (Founder, CEO, Managing Director) with verified direct contact details.',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.textSecondary,
-                                height: 1.4,
-                              ),
-                              textAlign: TextAlign.center,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: _isEnriching ? null : _enrichDecisionMaker,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryCta,
+                            foregroundColor: AppColors.onPrimaryCta,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 38,
-                              child: ElevatedButton.icon(
-                                onPressed: _isEnriching
-                                    ? null
-                                    : _enrichDecisionMaker,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryCta,
-                                  foregroundColor: AppColors.onPrimaryCta,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                          icon: _isEnriching
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                            Colors.white),
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
+                                )
+                              : const Text(
+                                  '👑',
+                                  style: TextStyle(fontSize: 13),
                                 ),
-                                icon: _isEnriching
-                                    ? const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
-                                        ),
-                                      )
-                                    : const Text(
-                                        '👑',
-                                        style: TextStyle(fontSize: 13),
-                                      ),
-                                label: Text(
-                                  _isEnriching
-                                      ? 'Searching Executive Database...'
-                                      : 'Find Founder / CEO Profile',
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
+                          label: Text(
+                            _isEnriching
+                                ? 'Searching Executive Database...'
+                                : 'Find Founder / CEO Profile',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
@@ -864,17 +829,13 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
     );
   }
 
-
   Widget _buildContactRow({
     required IconData icon,
     required Color iconColor,
     required String title,
     required String value,
     Widget? badge,
-    required VoidCallback onCopy,
-    VoidCallback? onAction,
-    String? actionTooltip,
-    IconData? actionIcon,
+    List<Widget> actions = const [],
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -914,26 +875,7 @@ class _LeadDetailBottomSheetState extends State<LeadDetailBottomSheet> {
               ],
             ),
           ),
-          if (onAction != null && actionIcon != null) ...[
-            IconButton(
-              icon: Icon(actionIcon, size: 16),
-              color: iconColor,
-              tooltip: actionTooltip,
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-              splashRadius: 16,
-              onPressed: onAction,
-            ),
-          ],
-          IconButton(
-            icon: const Icon(Icons.copy_rounded, size: 15),
-            color: AppColors.textMuted,
-            tooltip: 'Copy',
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            splashRadius: 16,
-            onPressed: onCopy,
-          ),
+          ...actions,
         ],
       ),
     );
